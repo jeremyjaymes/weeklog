@@ -145,7 +145,7 @@ Any other non-zero code is a failure. stderr is collapsed to one line and trunca
 
 ## Built-in sources
 
-`git`, `claude-code`, `codex`, `github`, and `linear` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. Their collectors are not implemented yet: `collect` returns an error until a later milestone. Describe still returns protocol 1 and version `0.0.0`.
+`git`, `claude-code`, `codex`, `github`, and `linear` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. The git collector reads commits from local repositories and describes version `0.1.0`. `claude-code`, `codex`, `github`, and `linear` do not collect yet: `collect` returns an error until a later milestone, and describe returns protocol 1 and version `0.0.0`.
 
 | Name | Config |
 |---|---|
