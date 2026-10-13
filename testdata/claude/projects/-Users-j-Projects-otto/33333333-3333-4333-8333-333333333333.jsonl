@@ -1,0 +1,4 @@
+{"type":"user","message":{"role":"user","content":"no timestamp here"}}
+{"type":"assistant","timestamp":"yesterday","message":{"role":"assistant","content":"hi"}}
+[1, 2, 3]
+null

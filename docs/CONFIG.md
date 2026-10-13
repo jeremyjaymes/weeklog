@@ -84,7 +84,7 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 | Type | Fields |
 |---|---|
 | `git` | `roots` (array of paths, required), `authors` (array of strings). Each root is scanned for repositories through three directory levels. `authors` matches author emails or names; when omitted, `identity.emails` is used. |
-| `claude-code` | none |
+| `claude-code` | none. Reads `$CLAUDE_CONFIG_DIR/projects` when that variable is set, and `~/.claude/projects` otherwise. |
 | `codex` | none |
 | `github` | `token` (secret, optional) |
 | `linear` | `token` (secret, required), `ticket_pattern` (regular expression) |
