@@ -1,0 +1,5 @@
+/weeklog
+/dist/
+*.exe
+*.test
+*.out
