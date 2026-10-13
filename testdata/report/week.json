@@ -1,0 +1,153 @@
+{
+  "week": "2026-W41",
+  "since": "2026-10-05T00:00:00Z",
+  "until": "2026-10-12T00:00:00Z",
+  "generated_at": "2026-10-13T12:00:00Z",
+  "weeklog_version": "dev",
+  "heading": "Week 2026-W41 (Oct 5 – Oct 11)",
+  "range": "Oct 5 – Oct 11",
+  "summary": {
+    "shipped": 2,
+    "in_progress": 1,
+    "explored": 1,
+    "abandoned": 1,
+    "agent_seconds": 8100,
+    "commits": 5,
+    "prs_merged": 1,
+    "line": "**Shipped 2 · In progress 1 · Explored 1 · Abandoned 1** · ~2h15m agent time · 5 commits · 1 PR merged"
+  },
+  "sections": [
+    {
+      "id": "shipped",
+      "title": "Shipped",
+      "items": [
+        {
+          "id": 1,
+          "title": "Admin is_admin gate",
+          "heading": "Admin is_admin gate — GEN-341",
+          "status": "shipped",
+          "repo": "github.com/acme/smilepostcards-laravel",
+          "repo_name": "smilepostcards-laravel",
+          "branch": "cursor/admin-gate",
+          "ticket": "GEN-341",
+          "started": "2026-10-06T15:00:00Z",
+          "commits": 2,
+          "sessions": 2,
+          "agent_seconds": 6000,
+          "estimate_seconds": 0,
+          "reasons": [
+            "ref:GEN-341 in commit message",
+            "ref:GEN-341 in prompt",
+            "ref:GEN-341 in title",
+            "ref:GEN-341 ticket"
+          ],
+          "bullets": [
+            "PR [#5](https://github.com/acme/smilepostcards-laravel/pull/5) merged Oct 8 · smilepostcards-laravel",
+            "2 commits · 2 Claude Code sessions (1h40m)",
+            "Linked by: `ref:GEN-341 in commit message`, `ref:GEN-341 in prompt`, `ref:GEN-341 in title`, `ref:GEN-341 ticket`"
+          ]
+        },
+        {
+          "title": "Bump version",
+          "heading": "Bump version",
+          "status": "shipped",
+          "repo": "github.com/acme/zebra",
+          "repo_name": "zebra",
+          "branch": "main",
+          "started": "2026-10-10T12:00:00Z",
+          "commits": 1,
+          "sessions": 0,
+          "agent_seconds": 0,
+          "estimate_seconds": 900,
+          "bullets": [
+            "1 commit (~15m estimate) · zebra"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "in_progress",
+      "title": "In progress",
+      "items": [
+        {
+          "id": 2,
+          "title": "Retry webhook delivery",
+          "heading": "Retry webhook delivery",
+          "status": "in_progress",
+          "repo": "github.com/acme/otto",
+          "repo_name": "otto",
+          "branch": "cursor/webhooks",
+          "started": "2026-10-09T17:00:00Z",
+          "commits": 1,
+          "sessions": 0,
+          "agent_seconds": 0,
+          "estimate_seconds": 900,
+          "reasons": [
+            "branch:cursor/webhooks"
+          ],
+          "bullets": [
+            "PR [#12](https://github.com/acme/otto/pull/12) open Oct 9 · otto",
+            "1 commit (~15m estimate)",
+            "Linked by: `branch:cursor/webhooks`"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "explored",
+      "title": "Explored",
+      "items": [
+        {
+          "title": "Try Lob adapter spike",
+          "heading": "Try Lob adapter spike",
+          "status": "explored",
+          "repo": "github.com/acme/otto",
+          "repo_name": "otto",
+          "started": "2026-10-07T10:00:00Z",
+          "commits": 0,
+          "sessions": 1,
+          "agent_seconds": 2100,
+          "estimate_seconds": 0,
+          "bullets": [
+            "1 Codex session (35m), no commits"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "abandoned",
+      "title": "Abandoned / stale",
+      "items": [
+        {
+          "title": "Revert \"ship the spike\"",
+          "heading": "Revert \"ship the spike\"",
+          "status": "abandoned",
+          "repo": "github.com/acme/old",
+          "repo_name": "old",
+          "branch": "wip/old",
+          "started": "2026-10-08T11:00:00Z",
+          "commits": 1,
+          "sessions": 0,
+          "agent_seconds": 0,
+          "estimate_seconds": 900,
+          "bullets": [
+            "1 commit (~15m estimate) · old"
+          ]
+        }
+      ]
+    }
+  ],
+  "other": [
+    {
+      "kind": "pr_review",
+      "label": "1 PR review",
+      "count": 1
+    },
+    {
+      "kind": "comment",
+      "source": "linear",
+      "label": "2 Linear comments",
+      "count": 2
+    }
+  ]
+}
