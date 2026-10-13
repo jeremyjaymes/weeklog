@@ -2,7 +2,7 @@
 
 An open-source CLI that pulls your week from pluggable sources (git, coding agents, pull requests, and tickets), links the activity into units of work, and writes a plain Markdown weekly log you own.
 
-**Status: pre-alpha.** The repository is a skeleton. `weeklog version` is the only command implemented so far.
+**Status: pre-alpha.** `weeklog version` and `weeklog config check` are implemented.
 
 ## Build
 
@@ -18,6 +18,17 @@ A development build prints `weeklog version dev`. Release builds inject the vers
 ```bash
 go build -ldflags "-X main.version=v0.1.0" -o weeklog ./cmd/weeklog
 ```
+
+## Config
+
+weeklog reads `$XDG_CONFIG_HOME/weeklog/config.toml`, or `~/.config/weeklog/config.toml` when `XDG_CONFIG_HOME` is unset. `--config` selects another file.
+
+```bash
+weeklog config check
+weeklog config check --config ./config.toml
+```
+
+`config check` resolves `env:`, `cmd:`, and `file:` secret references and reports whether each one resolved. It does not print secret values. See [docs/CONFIG.md](docs/CONFIG.md).
 
 ## Test
 
