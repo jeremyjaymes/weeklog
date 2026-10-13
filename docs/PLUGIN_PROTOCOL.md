@@ -173,6 +173,12 @@ Any other non-zero code is a failure. stderr is redacted, collapsed to one line,
 
 Both commands accept `--timeout` (default `120s`).
 
+`weeklog collect` runs `collect` for each configured source. The default window is the previous full week in the configured timezone. `--week YYYY-Www` selects an ISO week, and `--since` with `--until` selects an explicit range (`--until` is exclusive). `--source` limits the run to configured sources and can be repeated. `--timeout` limits each source. `--db` selects the SQLite file; the default is `$XDG_DATA_HOME/weeklog/weeklog.db`, or `~/.local/share/weeklog/weeklog.db` when `XDG_DATA_HOME` is unset.
+
+A source whose collector is not implemented yet is skipped and listed. A source that fails does not stop the others. Events from sources that succeed are stored, then the linker runs. The cursor is saved only after a source succeeds. Cancelling the command stops the current source and does not start another. The command exits 0 when every selected source succeeded or was skipped. It exits 1 when a source fails or linking fails; events already stored are kept.
+
+`codex`, `github`, and `linear` still return the not-implemented collector error, so collect skips them.
+
 ## Example
 
 This program answers `describe` and emits one collect event. It is illustrative. A supported example plugin is a later milestone.

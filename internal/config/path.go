@@ -48,6 +48,11 @@ func ResolveConfigPath(flag string) (string, error) {
 	return path, nil
 }
 
+// ExpandPath expands a leading ~ and cleans path. An empty path stays empty.
+func ExpandPath(path string) (string, error) {
+	return cleanPath(path)
+}
+
 // cleanPath expands a leading ~ and cleans the path. An empty path stays empty.
 func cleanPath(path string) (string, error) {
 	path = strings.TrimSpace(path)

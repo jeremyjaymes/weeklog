@@ -86,6 +86,27 @@ func (r CheckResult) Secret(sourceIndex int, key string) (string, bool) {
 	return "", false
 }
 
+// PluginConfig returns a copy of source index's settings with secret fields
+// replaced by their resolved values. The map contains secrets. Callers must
+// not log or display it. ok is false when index is outside the loaded config.
+func (r CheckResult) PluginConfig(index int) (map[string]any, bool) {
+	if r.Config == nil || index < 0 || index >= len(r.Config.Sources) {
+		return nil, false
+	}
+	settings := r.Config.Sources[index].Settings
+	out := make(map[string]any, len(settings))
+	for key, value := range settings {
+		out[key] = value
+	}
+	for _, secret := range r.secrets {
+		if secret.SourceIndex != index || secret.err != nil {
+			continue
+		}
+		out[secret.Key] = secret.value.Value()
+	}
+	return out, true
+}
+
 // SecretValues returns resolved secret values, including literals.
 // Unresolved references are omitted. Values are unique and follow first
 // appearance. Callers must not log or display the result.
