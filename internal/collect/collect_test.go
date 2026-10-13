@@ -523,6 +523,60 @@ func TestCollectCancelStopsLaterSources(t *testing.T) {
 	}
 }
 
+func TestCollectPassesTicketPatternToLinker(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "weeklog.db")
+	t.Setenv("WEEKLOG_LINK_TOKEN", "weeklog-link-token")
+	linear := &scripted{name: "linear", events: []event.Event{
+		{
+			Source: "linear", SourceID: "GEN-301", Kind: event.KindTicket,
+			TS: time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC), Title: "Webhook retries",
+		},
+		{
+			Source: "git", SourceID: "0123456789abcdef0123456789abcdef01234567", Kind: event.KindCommit,
+			TS: time.Date(2026, 10, 8, 15, 0, 0, 0, time.UTC), Title: "ship it", Summary: "ship GEN-301",
+		},
+		{
+			Source: "linear", SourceID: "ABC-99", Kind: event.KindTicket,
+			TS: time.Date(2026, 10, 6, 13, 0, 0, 0, time.UTC), Title: "Other",
+		},
+		{
+			Source: "git", SourceID: "fedcba9876543210fedcba9876543210fedcba98", Kind: event.KindCommit,
+			TS: time.Date(2026, 10, 8, 16, 0, 0, 0, time.UTC), Title: "other", Summary: "ship ABC-99",
+		},
+	}}
+	reg := newRegistry(t, map[string]source.Source{"linear": linear})
+	summary, err := Run(context.Background(), reg, Options{
+		ConfigPath: writeConfig(t, dir, baseConfig(`
+[[source]]
+type = "linear"
+token = "env:WEEKLOG_LINK_TOKEN"
+ticket_pattern = "GEN-\\d+"
+`)),
+		DBPath:  dbPath,
+		Since:   "2026-10-05",
+		Until:   "2026-10-12",
+		Timeout: time.Second,
+	})
+	if err != nil {
+		t.Fatalf("%v\n%s", err, summary.Text)
+	}
+	if !strings.Contains(summary.Text, "link: ok") {
+		t.Fatalf("summary = %s", summary.Text)
+	}
+	st := reopen(t, dbPath)
+	items, err := st.ListWorkItems(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Title != "Webhook retries" || len(items[0].Events) != 2 {
+		t.Fatalf("items = %+v", items)
+	}
+	if items[0].Events[0].SourceID != "GEN-301" || items[0].Events[1].Reason != "ref:GEN-301 in commit message" {
+		t.Fatalf("members = %+v", items[0].Events)
+	}
+}
+
 func TestCollectRejectsNilInputs(t *testing.T) {
 	if _, err := Run(context.Background(), nil, Options{DBPath: "x"}); err == nil {
 		t.Fatal("expected a nil registry to fail")
