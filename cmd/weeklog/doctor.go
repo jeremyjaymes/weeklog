@@ -53,7 +53,7 @@ A missing config file is a warning. A plugin that fails describe is an error.
 			return nil
 		},
 	}
-	addTimeoutFlag(cmd)
+	addTimeoutFlag(cmd, "time limit for each plugin")
 	return cmd
 }
 

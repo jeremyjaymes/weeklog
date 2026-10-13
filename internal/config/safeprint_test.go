@@ -96,4 +96,15 @@ token = "` + literal + `"
 	if len(values) != 2 || values[0] != envSecret || values[1] != literal {
 		t.Fatal("SecretValues mismatch")
 	}
+	githubCfg, ok := result.PluginConfig(0)
+	if !ok || githubCfg["token"] != envSecret {
+		t.Fatalf("github plugin config = %#v", githubCfg)
+	}
+	basecampCfg, ok := result.PluginConfig(1)
+	if !ok || basecampCfg["token"] != literal || basecampCfg["account_id"] != "123" {
+		t.Fatalf("basecamp plugin config = %#v", basecampCfg)
+	}
+	if _, ok := result.PluginConfig(2); ok {
+		t.Fatal("expected a missing source index to fail")
+	}
 }

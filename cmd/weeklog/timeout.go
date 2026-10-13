@@ -9,8 +9,8 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/source"
 )
 
-func addTimeoutFlag(cmd *cobra.Command) {
-	cmd.Flags().Duration("timeout", source.DefaultTimeout, "time limit for each plugin describe")
+func addTimeoutFlag(cmd *cobra.Command, usage string) {
+	cmd.Flags().Duration("timeout", source.DefaultTimeout, usage)
 }
 
 func timeoutFlag(cmd *cobra.Command) (time.Duration, error) {

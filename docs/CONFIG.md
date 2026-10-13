@@ -130,3 +130,9 @@ Exit status is 0 when there are no errors. Warnings, including literal secrets, 
 weeklog config check
 weeklog config check --config ~/.config/weeklog/config.toml
 ```
+
+## `weeklog collect`
+
+`weeklog collect` loads this same file, resolves secret references, and passes the resolved settings to each source. It refuses to collect when config check would report an error. Warnings, including a literal secret, are printed and collection continues.
+
+The collect window uses `identity.timezone` and `identity.week_starts`. With no window flags, collect uses the previous full week in that timezone. See the command help for `--week`, `--since`, `--until`, and `--source`.

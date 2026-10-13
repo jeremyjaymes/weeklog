@@ -48,6 +48,6 @@ the list is printed, including when a plugin's describe check fails.
 			return err
 		},
 	}
-	addTimeoutFlag(cmd)
+	addTimeoutFlag(cmd, "time limit for each plugin")
 	return cmd
 }
