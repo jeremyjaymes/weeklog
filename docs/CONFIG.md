@@ -8,7 +8,7 @@ weeklog picks the file in this order:
 
 1. `--config PATH` when the flag is set. A leading `~` expands to your home directory.
 2. `$XDG_CONFIG_HOME/weeklog/config.toml` when `XDG_CONFIG_HOME` is set.
-3. The OS user config directory. On Linux and macOS that is `~/.config/weeklog/config.toml`.
+3. `$HOME/.config/weeklog/config.toml` on Linux and macOS. On Windows, the OS user config directory.
 
 `--config` is a global flag, so both of these work:
 

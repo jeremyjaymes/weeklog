@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -13,16 +14,24 @@ const (
 )
 
 // DefaultPath returns the config file path from XDG_CONFIG_HOME when that
-// variable is set, and otherwise from the OS user config directory.
+// variable is set. Otherwise it uses $HOME/.config on Unix, including macOS,
+// and the OS user config directory on Windows.
 func DefaultPath() (string, error) {
 	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
 		return filepath.Join(dir, configAppDir, configFileName), nil
 	}
-	dir, err := os.UserConfigDir()
+	if runtime.GOOS == "windows" {
+		dir, err := os.UserConfigDir()
+		if err != nil {
+			return "", fmt.Errorf("find config directory: %w", err)
+		}
+		return filepath.Join(dir, configAppDir, configFileName), nil
+	}
+	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("find config directory: %w", err)
 	}
-	return filepath.Join(dir, configAppDir, configFileName), nil
+	return filepath.Join(home, ".config", configAppDir, configFileName), nil
 }
 
 // ResolveConfigPath returns flag when it is set and the default path otherwise.

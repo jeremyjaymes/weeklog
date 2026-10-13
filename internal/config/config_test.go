@@ -266,18 +266,19 @@ func TestResolveConfigPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dir, err := os.UserConfigDir()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got != filepath.Join(dir, "weeklog", "config.toml") {
-		t.Fatalf("fallback = %q", got)
-	}
-	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" {
-		unixWant := filepath.Join(home, ".config", "weeklog", "config.toml")
-		if got != unixWant {
-			t.Fatalf("unix fallback = %q, want %q", got, unixWant)
+	if runtime.GOOS == "windows" {
+		dir, dirErr := os.UserConfigDir()
+		if dirErr != nil {
+			t.Fatal(dirErr)
 		}
+		if got != filepath.Join(dir, "weeklog", "config.toml") {
+			t.Fatalf("windows fallback = %q", got)
+		}
+		return
+	}
+	unixWant := filepath.Join(home, ".config", "weeklog", "config.toml")
+	if got != unixWant {
+		t.Fatalf("unix fallback = %q, want %q", got, unixWant)
 	}
 }
 
