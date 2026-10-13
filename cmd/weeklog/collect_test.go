@@ -117,8 +117,14 @@ fi
 if [ "$1" != "collect" ]; then
   exit 0
 fi
-req=$(cat)
-printf '%s\n' "$req" > "$HOME/plug-request.json"
+# Read stdin in the shell. The test PATH only contains the plugin dir and
+# git's directory, and on macOS that is Homebrew, which does not have cat.
+req=
+while IFS= read -r line || [ -n "$line" ]; do
+  req="${req}${line}
+"
+done
+printf '%s' "$req" > "$HOME/plug-request.json"
 case "$req" in
   *'"cursor":"v1"'*)
     printf '%s\n' '{"type":"cursor","cursor":"v1"}'
