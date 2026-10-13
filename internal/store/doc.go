@@ -7,5 +7,6 @@
 // on (source, source_id), so collecting the same window again does not add rows.
 //
 // Timestamps are stored in UTC as 2006-01-02T15:04:05.000000000Z so they sort
-// lexicographically.
+// lexicographically. String fields are redacted before insert, so the database
+// does not keep secrets.
 package store

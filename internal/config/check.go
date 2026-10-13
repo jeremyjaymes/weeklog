@@ -86,6 +86,35 @@ func (r CheckResult) Secret(sourceIndex int, key string) (string, bool) {
 	return "", false
 }
 
+// SecretValues returns resolved secret values, including literals.
+// Unresolved references are omitted. Values are unique and follow first
+// appearance. Callers must not log or display the result.
+func (r CheckResult) SecretValues() []string {
+	if len(r.secrets) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(r.secrets))
+	out := make([]string, 0, len(r.secrets))
+	for _, secret := range r.secrets {
+		if secret.err != nil {
+			continue
+		}
+		value := secret.value.Value()
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // Report returns the human-readable check output.
 // It says whether each secret resolved and never prints the value.
 func (r CheckResult) Report() string {

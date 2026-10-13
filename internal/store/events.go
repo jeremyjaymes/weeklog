@@ -29,16 +29,18 @@ type UpsertResult struct {
 }
 
 // UpsertEvents inserts events or updates the row with the same (source, source_id).
-// Files and refs are replaced. The write is one transaction: if any event is
+// Files and refs are replaced. Every string field is redacted before validation,
+// so a secret is not written. The write is one transaction: if any event is
 // invalid, nothing is written. Collecting the same events again leaves the
 // event row count unchanged.
 func (s *Store) UpsertEvents(ctx context.Context, events []event.Event) (UpsertResult, error) {
 	if ctx == nil {
 		return UpsertResult{}, errors.New("nil context")
 	}
+	redactor := s.activeRedactor()
 	prepared := make([]event.Event, len(events))
 	for i, ev := range events {
-		next, err := event.Prepare(ev)
+		next, err := event.Prepare(redactor.Event(ev))
 		if err != nil {
 			return UpsertResult{}, fmt.Errorf("event[%d]: %w", i, err)
 		}
