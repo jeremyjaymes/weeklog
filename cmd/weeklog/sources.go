@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -26,16 +25,13 @@ the list is printed, including when a plugin's describe check fails.
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			timeout, err := cmd.Flags().GetDuration("timeout")
+			timeout, err := timeoutFlag(cmd)
 			if err != nil {
 				return err
 			}
-			if timeout <= 0 {
-				return fmt.Errorf("timeout must be positive")
-			}
 			reg := newSourceRegistry()
 			reg.SetTimeout(timeout)
-			list, err := reg.List(cmdContext(cmd))
+			list, err := reg.List(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -45,18 +41,13 @@ the list is printed, including when a plugin's describe check fails.
 					return err
 				}
 			}
-			_, err = fmt.Fprint(out, source.FormatSources(list.Sources))
+			if _, err := fmt.Fprint(out, source.FormatSources(list.Sources)); err != nil {
+				return err
+			}
+			_, err = fmt.Fprint(out, source.FormatIgnored(list.Ignored))
 			return err
 		},
 	}
-	cmd.Flags().Duration("timeout", source.DefaultTimeout, "time limit for each plugin describe")
+	addTimeoutFlag(cmd)
 	return cmd
-}
-
-func cmdContext(cmd *cobra.Command) context.Context {
-	ctx := cmd.Context()
-	if ctx == nil {
-		return context.Background()
-	}
-	return ctx
 }

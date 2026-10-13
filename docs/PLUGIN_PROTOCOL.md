@@ -15,7 +15,11 @@ weeklog searches these places, in order:
 
 The first executable for a name wins. A later copy of the same name is ignored. A plugin whose name matches a built-in (`git`, `claude-code`, `codex`, `github`, `linear`) is ignored so it cannot replace the built-in.
 
-The file must be a regular file and, on Unix, executable. A matching file that is not executable is ignored. `weeklog doctor` reports ignored files. `weeklog sources` does not list them.
+The file must be a regular file and, on Unix, executable. A matching file that is not executable is ignored.
+
+On Unix, weeklog also ignores a plugin when the file or the directory that contains it is writable by the group or by other users (the mode includes `022`), or when that file or directory is owned by someone other than the current user or root. The ignore reason is `group/world-writable` or `not owned by you or root`. Windows does not apply this ownership check; discovery there only requires the `weeklog-source-<name>` name.
+
+`weeklog sources` and `weeklog doctor` report ignored files and the reason. They do not execute them.
 
 ## Invocation
 
@@ -28,9 +32,15 @@ weeklog-source-<name> collect
 
 `describe` reads nothing. `collect` reads one JSON request from stdin. Both write to stdout and may write diagnostics to stderr.
 
-The argument list is only the executable path and one command. weeklog does not put configuration or secrets in argv, and it does not add them to the environment. A plugin sees the environment it was started with. Resolved secrets arrive only in the collect request.
+The argument list is only the executable path and one command. weeklog does not put configuration or secrets in argv. The plugin process does not inherit weeklog's environment. It receives only:
 
-The time limit for one invocation is 120 seconds unless the caller passes a shorter `--timeout`. A plugin that exceeds it is killed. Its stderr, if any, is attached to the error.
+- `PATH`, `HOME`, `TMPDIR`, `LANG`, and `TZ`
+- every variable whose name starts with `LC_` or `XDG_`
+- on Windows, `SystemRoot`, `USERPROFILE`, `TEMP`, and `Path` (the usual spelling of `PATH`)
+
+Other variables, including `GITHUB_TOKEN`, `LINEAR_API_KEY`, and `AWS_*`, are not passed. Resolved secrets arrive only in the collect request on stdin.
+
+The time limit for one invocation is 120 seconds unless the caller passes a shorter `--timeout`. A plugin that exceeds it is killed. Its stderr, if any, is redacted and attached to the error.
 
 ## describe
 
@@ -131,17 +141,17 @@ stdout is JSON lines. One JSON object per line. Blank lines are ignored. A line 
 
 `cursor` is an opaque string of at most 64 KiB. The host saves the last cursor line and sends it back on the next collect. A plugin that does not emit a cursor is run over the full window next time; dedupe covers the overlap. An empty cursor string is a saved value. Omitting the cursor line means "keep the previous cursor".
 
-Events are kept only when the process exits 0. A failed run does not advance the cursor.
+Events are kept only when the process exits 0. The host buffers them in memory until then, and it accepts at most 100000 events from one collect. A plugin that emits more fails with a protocol error, and none of those events are delivered. Invalid lines do not count toward the limit. A failed run does not advance the cursor.
 
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
 | 0 | Success. Invalid lines were dropped. |
-| 1 | Failure. weeklog shows stderr. |
+| 1 | Failure. weeklog shows stderr after redacting secrets. |
 | 2 | The configuration or the collect request was rejected. |
 
-Any other non-zero code is a failure. stderr is collapsed to one line and truncated.
+Any other non-zero code is a failure. stderr is redacted, collapsed to one line, and truncated.
 
 ## Built-in sources
 

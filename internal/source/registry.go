@@ -187,7 +187,11 @@ func (r *Registry) inspect(ctx context.Context) (inspection, error) {
 		if err := ctx.Err(); err != nil {
 			return inspection{}, err
 		}
-		snap.sources = append(snap.sources, r.describe(ctx, name, KindBuiltin, "", r.builtins[name]))
+		info, err := r.describe(ctx, name, KindBuiltin, "", r.builtins[name])
+		if err != nil {
+			return inspection{}, err
+		}
+		snap.sources = append(snap.sources, info)
 	}
 	found, ignored, status := r.discover()
 	snap.dir = status
@@ -197,19 +201,26 @@ func (r *Registry) inspect(ctx context.Context) (inspection, error) {
 			return inspection{}, err
 		}
 		src := &Process{Name: plugin.Name, Path: plugin.Path, Timeout: r.timeoutOr()}
-		snap.sources = append(snap.sources, r.describe(ctx, plugin.Name, KindPlugin, plugin.Path, src))
+		info, err := r.describe(ctx, plugin.Name, KindPlugin, plugin.Path, src)
+		if err != nil {
+			return inspection{}, err
+		}
+		snap.sources = append(snap.sources, info)
 	}
 	return snap, nil
 }
 
-func (r *Registry) describe(ctx context.Context, name string, kind Kind, path string, src Source) Info {
+func (r *Registry) describe(ctx context.Context, name string, kind Kind, path string, src Source) (Info, error) {
 	info := Info{Name: name, Kind: kind, Path: path}
 	ctx, cancel := context.WithTimeout(ctx, r.timeoutOr())
 	defer cancel()
 	manifest, err := src.Describe(ctx)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return Info{}, err
+		}
 		info.Err = err
-		return info
+		return info, nil
 	}
 	if manifest.Name != name {
 		info.Err = &Failure{
@@ -218,9 +229,9 @@ func (r *Registry) describe(ctx context.Context, name string, kind Kind, path st
 			Reason: "manifest name " + oneLine(manifest.Name),
 			Err:    ErrProtocol,
 		}
-		return info
+		return info, nil
 	}
 	info.Protocol = manifest.Protocol
 	info.Version = manifest.Version
-	return info
+	return info, nil
 }

@@ -1,6 +1,8 @@
 package source
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -62,5 +64,28 @@ func TestParseCollectSkipsOversizedLine(t *testing.T) {
 	}
 	if events[0].TS.IsZero() || !events[0].TS.Equal(time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("ts = %s", events[0].TS)
+	}
+}
+
+func TestParseCollectRejectsTooManyEvents(t *testing.T) {
+	orig := maxCollectEvents
+	maxCollectEvents = 2
+	t.Cleanup(func() { maxCollectEvents = orig })
+
+	var b strings.Builder
+	for i := 0; i < 4; i++ {
+		fmt.Fprintf(&b, "{\"type\":\"event\",\"event\":{\"source_id\":\"e%d\",\"kind\":\"commit\",\"ts\":\"2026-10-08T00:00:00Z\"}}\n", i)
+	}
+	var result Result
+	var events []event.Event
+	_, err := parseCollect("git", strings.NewReader(b.String()), &result, &events)
+	if !errors.Is(err, ErrProtocol) {
+		t.Fatalf("err = %v", err)
+	}
+	if !strings.Contains(err.Error(), "exceeded 2 events") {
+		t.Fatalf("err = %v", err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("events = %d", len(events))
 	}
 }

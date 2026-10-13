@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/jeremyjaymes/weeklog/internal/event"
@@ -46,22 +47,34 @@ func trimNL(line []byte) []byte {
 
 // parseCollect reads JSON lines. Invalid lines increment the dropped count
 // and do not stop the scan. Events are appended and not emitted yet.
+// More than maxCollectEvents events is a protocol error. Reading continues
+// to EOF so a plugin blocked on a full stdout pipe can still exit.
 func parseCollect(name string, r io.Reader, result *Result, events *[]event.Event) (int, error) {
 	br := bufio.NewReader(r)
 	dropped := 0
+	var overflow error
 	for {
 		line, tooLong, err := readLogicalLine(br, maxMessageBytes)
-		if tooLong {
-			dropped++
-		} else if trimmed := bytes.TrimSpace(line); len(trimmed) > 0 {
-			if !applyLine(name, trimmed, result, events) {
+		if overflow == nil {
+			if tooLong {
 				dropped++
+			} else if trimmed := bytes.TrimSpace(line); len(trimmed) > 0 {
+				before := len(*events)
+				if !applyLine(name, trimmed, result, events) {
+					dropped++
+				} else if len(*events) > before && len(*events) > maxCollectEvents {
+					*events = (*events)[:maxCollectEvents]
+					overflow = fmt.Errorf("%w: collect exceeded %d events", ErrProtocol, maxCollectEvents)
+				}
 			}
 		}
 		if err == io.EOF {
-			return dropped, nil
+			return dropped, overflow
 		}
 		if err != nil {
+			if overflow != nil {
+				return dropped, overflow
+			}
 			return dropped, err
 		}
 	}

@@ -111,8 +111,8 @@ type Result struct {
 }
 
 // Failure is a plugin or protocol error. Error text never includes the
-// collect request. Stderr is included because a failed plugin's stderr is
-// shown to the user; plugins must not print secrets there.
+// collect request. Stderr is redacted before it is stored, because a failed
+// plugin's stderr is shown to the user and later milestones may log it.
 type Failure struct {
 	Name   string
 	Op     string

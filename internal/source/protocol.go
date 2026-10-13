@@ -25,6 +25,9 @@ var (
 	maxStderrBytes  = 8 << 10
 	maxCursorBytes  = 64 << 10
 	maxVersionRunes = 64
+	// maxCollectEvents is how many events one collect may buffer.
+	// Events are delivered only after exit 0, so this bounds memory.
+	maxCollectEvents = 100000
 )
 
 // wireLine is one collect stdout message.

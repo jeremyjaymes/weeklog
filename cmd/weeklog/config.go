@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -46,11 +45,7 @@ A literal secret in the file is allowed and reported as a warning.`,
 			if err != nil {
 				return err
 			}
-			ctx := cmd.Context()
-			if ctx == nil {
-				ctx = context.Background()
-			}
-			result, err := config.Check(ctx, path)
+			result, err := config.Check(cmd.Context(), path)
 			if err != nil {
 				return err
 			}

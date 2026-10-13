@@ -166,7 +166,7 @@ func inspectPluginDir(path string) pluginDirStatus {
 		status.Err = errors.New("cannot read")
 		return status
 	}
-	if !directoryWritable(info) {
+	if !directoryWritable(path) {
 		status.Warning = "not writable"
 	}
 	return status
@@ -201,6 +201,10 @@ func scanDir(dir string, ignored *[]Ignored) []foundPlugin {
 		}
 		if !executable(info) {
 			*ignored = append(*ignored, Ignored{Name: name, Path: path, Reason: "not executable"})
+			continue
+		}
+		if reason := pluginTrustReason(dir, info); reason != "" {
+			*ignored = append(*ignored, Ignored{Name: name, Path: path, Reason: reason})
 			continue
 		}
 		found = append(found, foundPlugin{Name: name, Path: path})

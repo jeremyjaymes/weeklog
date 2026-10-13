@@ -3,8 +3,10 @@ package source
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,8 +19,8 @@ func TestProcessCollectRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	bin := linkHelper(t, dir, "todoist")
 	status := filepath.Join(dir, "status")
-	useHelper(t, "ok", status)
 	t.Setenv("WEEKLOG_SECRET_MARK", secret)
+	useHelper(t, "ok", status)
 
 	cursor := "prev"
 	proc := &Process{Name: "todoist", Path: bin, Timeout: 5 * time.Second}
@@ -58,8 +60,8 @@ func TestProcessDoesNotPutSecretInArgvOrErrors(t *testing.T) {
 	dir := t.TempDir()
 	bin := linkHelper(t, dir, "todoist")
 	status := filepath.Join(dir, "status")
-	useHelper(t, "exit1", status)
 	t.Setenv("WEEKLOG_SECRET_MARK", secret)
+	useHelper(t, "exit1", status)
 
 	proc := &Process{Name: "todoist", Path: bin, Timeout: 5 * time.Second}
 	_, err := proc.Describe(context.Background())
@@ -225,8 +227,33 @@ func linkHelper(t *testing.T, dir, name string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
+	control := filepath.Join(dir, name+"-control")
+	if err := os.MkdirAll(control, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	// The plugin process does not inherit the test's environment, so the
+	// wrapper reads the helper controls from disk and sets them itself.
+	t.Setenv("WEEKLOG_TEST_HELPER_CONTROL", control)
 	path := filepath.Join(dir, PluginPrefix+name)
-	if err := os.Symlink(bin, path); err != nil {
+	script := fmt.Sprintf(`#!/bin/sh
+set -eu
+control=%s
+mode=$(cat "$control/mode")
+status=$(cat "$control/status")
+secret=""
+if [ -f "$control/secret" ]; then
+  secret=$(cat "$control/secret")
+fi
+export WEEKLOG_SOURCE_TEST_HELPER=1
+export WEEKLOG_HELPER_MODE="$mode"
+export WEEKLOG_HELPER_STATUS="$status"
+export WEEKLOG_HELPER_NAME=%s
+if [ -n "$secret" ]; then
+  export WEEKLOG_SECRET_MARK="$secret"
+fi
+exec %s "$@"
+`, strconv.Quote(control), strconv.Quote(name), strconv.Quote(bin))
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -234,13 +261,102 @@ func linkHelper(t *testing.T, dir, name string) string {
 
 func useHelper(t *testing.T, mode, status string) {
 	t.Helper()
-	t.Setenv("WEEKLOG_SOURCE_TEST_HELPER", "1")
-	t.Setenv("WEEKLOG_HELPER_MODE", mode)
-	if status == "" {
-		t.Setenv("WEEKLOG_HELPER_STATUS", filepath.Join(t.TempDir(), "unused-status"))
-		return
+	control := os.Getenv("WEEKLOG_TEST_HELPER_CONTROL")
+	if control == "" {
+		t.Fatal("linkHelper was not called")
 	}
-	t.Setenv("WEEKLOG_HELPER_STATUS", status)
+	if status == "" {
+		status = filepath.Join(t.TempDir(), "unused-status")
+	}
+	writeControl(t, filepath.Join(control, "mode"), mode)
+	writeControl(t, filepath.Join(control, "status"), status)
+	if secret := os.Getenv("WEEKLOG_SECRET_MARK"); secret != "" {
+		writeControl(t, filepath.Join(control, "secret"), secret)
+	}
+}
+
+func writeControl(t *testing.T, path, value string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(value), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestProcessStripsParentEnvironment(t *testing.T) {
+	const token = "weeklog-fake-token-should-not-leak"
+	t.Setenv("WEEKLOG_FAKE_TOKEN", token)
+	t.Setenv("LC_ALL", "C")
+	t.Setenv("XDG_RUNTIME_DIR", filepath.Join(t.TempDir(), "run"))
+	if os.Getenv("HOME") == "" {
+		t.Setenv("HOME", t.TempDir())
+	}
+	if os.Getenv("PATH") == "" {
+		t.Fatal("PATH is empty")
+	}
+
+	dir := t.TempDir()
+	out := filepath.Join(dir, "env.txt")
+	script := fmt.Sprintf("#!/bin/sh\nset > %s\nprintf '%%s\\n' '%s'\n",
+		strconv.Quote(out),
+		`{"protocol":1,"name":"envplug","version":"0.1.0","config":{}}`)
+	path := filepath.Join(dir, PluginPrefix+"envplug")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	proc := &Process{Name: "envplug", Path: path, Timeout: 5 * time.Second}
+	if _, err := proc.Describe(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if strings.Contains(text, token) || strings.Contains(text, "WEEKLOG_FAKE_TOKEN=") {
+		t.Fatalf("plugin environment leaked the token:\n%s", text)
+	}
+	if !strings.Contains(text, "PATH=") || !strings.Contains(text, "HOME=") {
+		t.Fatalf("plugin environment = %s", text)
+	}
+	if !strings.Contains(text, "LC_ALL=") || !strings.Contains(text, "XDG_RUNTIME_DIR=") {
+		t.Fatalf("plugin environment dropped allowlisted vars:\n%s", text)
+	}
+}
+
+func TestProcessRedactsStderr(t *testing.T) {
+	dir := t.TempDir()
+	bin := linkHelper(t, dir, "todoist")
+	useHelper(t, "stderr-token", "")
+	proc := &Process{Name: "todoist", Path: bin, Timeout: 5 * time.Second}
+	_, err := proc.Describe(context.Background())
+	var failure *Failure
+	if !errors.As(err, &failure) {
+		t.Fatalf("err = %v", err)
+	}
+	if strings.Contains(failure.Stderr, helperStderrToken) || strings.Contains(err.Error(), helperStderrToken) {
+		t.Fatalf("stderr leaked the token: %q", failure.Stderr)
+	}
+	if !strings.Contains(failure.Stderr, "[REDACTED:") {
+		t.Fatalf("stderr = %q", failure.Stderr)
+	}
+}
+
+func TestProcessCollectEventCap(t *testing.T) {
+	orig := maxCollectEvents
+	maxCollectEvents = 2
+	t.Cleanup(func() { maxCollectEvents = orig })
+
+	dir := t.TempDir()
+	bin := linkHelper(t, dir, "todoist")
+	useHelper(t, "many", "")
+	proc := &Process{Name: "todoist", Path: bin, Timeout: 5 * time.Second}
+	_, err := proc.Collect(context.Background(), sampleRequest("unused"), nil)
+	if !errors.Is(err, ErrProtocol) {
+		t.Fatalf("err = %v", err)
+	}
+	if !strings.Contains(err.Error(), "exceeded") || !strings.Contains(err.Error(), "2 events") {
+		t.Fatalf("err = %v", err)
+	}
 }
 
 func sampleRequest(secret string) CollectRequest {
