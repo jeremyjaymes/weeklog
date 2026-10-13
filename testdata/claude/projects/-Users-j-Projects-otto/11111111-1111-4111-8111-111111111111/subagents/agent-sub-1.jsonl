@@ -1,0 +1,3 @@
+{"type":"user","timestamp":"2026-10-08T14:20:00.000Z","sessionId":"sub-session-1","isSidechain":true,"cwd":"/Users/j/Projects/otto","gitBranch":"cursor/fix-webhooks","message":{"role":"user","content":"Look at the retry helper"}}
+{"type":"assistant","timestamp":"2026-10-08T14:21:00.000Z","sessionId":"sub-session-1","isSidechain":true,"message":{"role":"assistant","content":[{"type":"tool_use","id":"toolu_sub_write","name":"Write","input":{"file_path":"/Users/j/Projects/otto/docs/notes.md","content":"# notes\n"}},{"type":"tool_use","id":"toolu_sub_edit","name":"Edit","input":{"file_path":"/tmp/outside.txt","old_string":"x","new_string":"y"}}],"usage":{"input_tokens":100,"output_tokens":80}}}
+not-an-object

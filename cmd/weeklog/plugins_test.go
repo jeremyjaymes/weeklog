@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jeremyjaymes/weeklog/internal/source"
+	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/git"
 )
 
@@ -163,7 +164,7 @@ func TestBuiltinsDescribeThroughProtocol(t *testing.T) {
 				t.Fatalf("manifest = %#v", manifest)
 			}
 			_, err = builtin.src.Collect(context.Background(), source.CollectRequest{}, nil)
-			if builtin.name == "git" {
+			if builtin.name == "git" || builtin.name == "claude-code" {
 				if !errors.Is(err, source.ErrConfig) {
 					t.Fatalf("collect err = %v, want config error", err)
 				}
@@ -194,10 +195,14 @@ func TestSourcesAndDoctorHelp(t *testing.T) {
 }
 
 func builtinDescribedVersion(name string) string {
-	if name == "git" {
+	switch name {
+	case "git":
 		return git.Version
+	case "claude-code":
+		return claudecode.Version
+	default:
+		return source.BuiltinVersion
 	}
-	return source.BuiltinVersion
 }
 
 func isolatePlugins(t *testing.T) string {

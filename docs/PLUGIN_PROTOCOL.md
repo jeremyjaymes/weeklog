@@ -155,7 +155,7 @@ Any other non-zero code is a failure. stderr is redacted, collapsed to one line,
 
 ## Built-in sources
 
-`git`, `claude-code`, `codex`, `github`, and `linear` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. The git collector reads commits from local repositories and describes version `0.1.0`. `claude-code`, `codex`, `github`, and `linear` do not collect yet: `collect` returns an error until a later milestone, and describe returns protocol 1 and version `0.0.0`.
+`git`, `claude-code`, `codex`, `github`, and `linear` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. The git collector reads commits from local repositories and describes version `0.1.0`. The claude-code collector reads local Claude Code session transcripts and describes version `0.1.0`. Its cursor records each transcript file's size and modification time. `codex`, `github`, and `linear` do not collect yet: `collect` returns an error until a later milestone, and describe returns protocol 1 and version `0.0.0`.
 
 | Name | Config |
 |---|---|
