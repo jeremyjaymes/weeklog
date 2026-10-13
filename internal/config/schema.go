@@ -5,9 +5,10 @@ import (
 	"strings"
 )
 
-// Builtin source schemas stand in for plugin describe output until the
-// source registry exists. Unknown source types are external plugins: their
-// keys are preserved, and secret-like keys are resolved.
+// Builtin source schemas mirror the describe manifests of the built-in
+// sources. Unknown source types are external plugins: their keys are
+// preserved, and secret-like keys are resolved. config check does not
+// execute plugins.
 type fieldKind int
 
 const (

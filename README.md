@@ -2,7 +2,7 @@
 
 An open-source CLI that pulls your week from pluggable sources (git, coding agents, pull requests, and tickets), links the activity into units of work, and writes a plain Markdown weekly log you own.
 
-**Status: pre-alpha.** `weeklog version` and `weeklog config check` are implemented.
+**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, and `weeklog doctor` are implemented.
 
 ## Build
 
@@ -29,6 +29,17 @@ weeklog config check --config ./config.toml
 ```
 
 `config check` resolves `env:`, `cmd:`, and `file:` secret references and reports whether each one resolved. It does not print secret values. See [docs/CONFIG.md](docs/CONFIG.md).
+
+## Sources
+
+Built-in sources are compiled into the binary. An external plugin is an executable named `weeklog-source-<name>` on `PATH` or in the plugin directory (`$XDG_DATA_HOME/weeklog/plugins`, or `~/.local/share/weeklog/plugins`).
+
+```bash
+weeklog sources
+weeklog doctor
+```
+
+`sources` lists built-ins and plugins after a protocol `describe` check. `doctor` checks paths, permissions, and that each plugin speaks protocol v1. It does not print or resolve secrets. The protocol is specified in [docs/PLUGIN_PROTOCOL.md](docs/PLUGIN_PROTOCOL.md).
 
 ## Redaction
 
