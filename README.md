@@ -2,7 +2,7 @@
 
 An open-source CLI that pulls your week from pluggable sources (git, coding agents, pull requests, and tickets), links the activity into units of work, and writes a plain Markdown weekly log you own.
 
-**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, and `weeklog collect` are implemented.
+**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, and `weeklog link-run` are implemented.
 
 ## Build
 
@@ -54,6 +54,17 @@ weeklog collect --since 2026-10-05 --until 2026-10-12 --source git
 `--source` can be repeated. A source that does not collect yet is skipped. A source that fails does not stop the others, and events from the sources that succeed are kept. Collect then runs the linker. Cursors are saved per configured source and are not advanced when that source fails. Ctrl-C stops the current source.
 
 The database is `$XDG_DATA_HOME/weeklog/weeklog.db`, or `~/.local/share/weeklog/weeklog.db` when `XDG_DATA_HOME` is unset. `--db` selects another file. Resolved config secrets are redacted before events are written.
+
+## Linker
+
+`weeklog collect` runs the linker after sources finish. `weeklog link-run` runs it again without collecting.
+
+Pass 1 is deterministic and stores a reason on every link. A commit joins a pull request that lists its SHA. A ticket key such as `GEN-301` joins the events that mention it in a branch, commit message, pull request title or body, session prompt, or refs. A pull request joins commits and sessions on its head branch in the same repository. A pull request joins its reviews when their source ids share a lineage. Configured `ticket_pattern` values select the key shape. When none is set, weeklog uses the built-in shape.
+
+```bash
+weeklog link-run
+weeklog link-run --week 2026-W41
+```
 
 ## Redaction
 

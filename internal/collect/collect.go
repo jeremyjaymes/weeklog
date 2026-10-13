@@ -481,10 +481,15 @@ func (c collector) one(ctx context.Context, index int) outcome {
 }
 
 func (c collector) link(ctx context.Context, fn LinkFunc) error {
-	if fn == nil {
-		fn = linker.Run
+	if fn != nil {
+		return fn(ctx, c.st, c.window.Since, c.window.Until)
 	}
-	return fn(ctx, c.st, c.window.Since, c.window.Until)
+	patterns := linker.TicketPatterns(c.checked.Config)
+	opt := linker.Options{}
+	if len(patterns) > 0 {
+		opt.TicketPatterns = patterns
+	}
+	return linker.RunWith(ctx, c.st, c.window.Since, c.window.Until, opt)
 }
 
 func (c collector) saveCursor(key string, cursor *string) error {

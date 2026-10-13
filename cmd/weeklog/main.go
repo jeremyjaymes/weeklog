@@ -30,7 +30,7 @@ func newRootCmd() *cobra.Command {
 pull requests, and tickets), links the activity into units of work, and writes
 a plain Markdown weekly log.
 
-This build is pre-alpha. Implemented commands: version, config check, sources, doctor, collect.`,
+This build is pre-alpha. Implemented commands: version, config check, sources, doctor, collect, link-run.`,
 		SilenceUsage: true,
 		Version:      version,
 	}
@@ -39,6 +39,7 @@ This build is pre-alpha. Implemented commands: version, config check, sources, d
 	cmd.AddCommand(newConfigCmd())
 	cmd.AddCommand(newSourcesCmd())
 	cmd.AddCommand(newCollectCmd())
+	cmd.AddCommand(newLinkRunCmd())
 	cmd.AddCommand(newDoctorCmd())
 	return cmd
 }
