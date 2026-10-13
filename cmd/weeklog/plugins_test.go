@@ -162,7 +162,7 @@ func TestBuiltinsDescribeThroughProtocol(t *testing.T) {
 			if manifest.Name != builtin.name || manifest.Protocol != source.ProtocolVersion || manifest.Version != builtinDescribedVersion(builtin.name) {
 				t.Fatalf("manifest = %#v", manifest)
 			}
-			_, err = builtin.source.Collect(context.Background(), source.CollectRequest{}, nil)
+			_, err = builtin.src.Collect(context.Background(), source.CollectRequest{}, nil)
 			if builtin.name == "git" {
 				if !errors.Is(err, source.ErrConfig) {
 					t.Fatalf("collect err = %v, want config error", err)

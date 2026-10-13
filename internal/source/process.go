@@ -6,15 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/jeremyjaymes/weeklog/internal/event"
+	"github.com/jeremyjaymes/weeklog/internal/redact"
 )
 
 // Process implements Source by running a weeklog-source-<name> executable.
-// Secrets travel only in the collect request on stdin. Argv is the executable
-// path plus "describe" or "collect".
+// Secrets travel only in the collect request on stdin. The subprocess receives
+// pluginEnv, not the parent environment. Argv is the executable path plus
+// "describe" or "collect".
 type Process struct {
 	Name    string
 	Path    string
@@ -105,6 +110,8 @@ func (p *Process) exec(ctx context.Context, op string, stdin []byte, onStdout fu
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, p.Path, op)
+	// A nil Env would inherit the parent environment, including tokens.
+	cmd.Env = pluginEnv()
 	cmd.Stdin = bytes.NewReader(stdin)
 	cmd.WaitDelay = time.Second
 
@@ -139,7 +146,7 @@ func (p *Process) exec(ctx context.Context, op string, stdin []byte, onStdout fu
 	}
 	waitErr := cmd.Wait()
 	<-errCh
-	stderrText := stderrBuf.String()
+	stderrText := redact.Default().Text(stderrBuf.String())
 
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 		return nil, stderrText, 0, &Failure{
@@ -164,6 +171,43 @@ func (p *Process) exec(ctx context.Context, op string, stdin []byte, onStdout fu
 		return stdout, stderrText, exitErr.ExitCode(), nil
 	}
 	return nil, stderrText, 0, &Failure{Name: p.Name, Op: op, Reason: "cannot run plugin", Err: ErrFailed}
+}
+
+// pluginEnv is the environment passed to a plugin subprocess.
+// Secrets from the parent process are omitted. Plugins receive PATH, HOME,
+// TMPDIR, LANG, TZ, every LC_* variable, and every XDG_* variable. On
+// Windows they also receive SystemRoot, USERPROFILE, TEMP, and Path (the
+// usual spelling of PATH).
+//
+// The result is never nil. An empty slice starts the process with an empty
+// environment; a nil slice would inherit the parent environment.
+func pluginEnv() []string {
+	env := make([]string, 0)
+	for _, kv := range os.Environ() {
+		key, _, ok := strings.Cut(kv, "=")
+		if !ok || !pluginEnvAllowed(key) {
+			continue
+		}
+		env = append(env, kv)
+	}
+	return env
+}
+
+func pluginEnvAllowed(key string) bool {
+	switch key {
+	case "PATH", "HOME", "TMPDIR", "LANG", "TZ":
+		return true
+	}
+	if strings.HasPrefix(key, "LC_") || strings.HasPrefix(key, "XDG_") {
+		return true
+	}
+	if runtime.GOOS == "windows" {
+		switch key {
+		case "SystemRoot", "USERPROFILE", "TEMP", "Path":
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Process) timeout() time.Duration {

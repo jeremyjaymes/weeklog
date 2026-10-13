@@ -140,6 +140,15 @@ func plural(n int, word string) string {
 	return fmt.Sprintf("%d %ss", n, word)
 }
 
+// FormatIgnored renders plugins that were not loaded, including the reason.
+func FormatIgnored(items []Ignored) string {
+	var b strings.Builder
+	for _, item := range items {
+		fmt.Fprintf(&b, "ignored: %s (%s)\n", oneLine(item.Path), oneLine(item.Reason))
+	}
+	return b.String()
+}
+
 // FormatSources renders a source list. An error is printed on the following line.
 func FormatSources(list []Info) string {
 	var b strings.Builder

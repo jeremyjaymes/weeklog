@@ -50,6 +50,9 @@ func runSourceTestHelper() int {
 	case "exit1":
 		helperPrintf(os.Stderr, "boom\n")
 		return ExitFailed
+	case "stderr-token":
+		helperPrintf(os.Stderr, "auth failed: %s\n", helperStderrToken)
+		return ExitFailed
 	case "exit2":
 		helperPrintf(os.Stderr, "missing token\n")
 		return ExitConfig
@@ -110,6 +113,11 @@ func runSourceTestHelper() int {
 		helperPrintf(os.Stdout, "%s\n", strings.Repeat("x", 1000))
 		helperPrintf(os.Stdout, "{\"type\":\"event\",\"event\":{\"source_id\":\"e1\",\"kind\":\"commit\",\"ts\":\"2026-10-08T00:00:00Z\"}}\n")
 		return ExitOK
+	case "many":
+		for i := 0; i < 5; i++ {
+			helperPrintf(os.Stdout, "{\"type\":\"event\",\"event\":{\"source\":%q,\"source_id\":\"e%d\",\"kind\":\"ticket\",\"ts\":\"2026-10-08T14:02:11Z\",\"title\":\"n\"}}\n", name, i)
+		}
+		return ExitOK
 	default:
 		helperPrintf(os.Stdout, "{\"type\":\"event\",\"event\":{\"source\":%q,\"source_id\":\"e1\",\"kind\":\"ticket\",\"ts\":\"2026-10-08T14:02:11Z\",\"title\":\"Ship helper\"}}\n", name)
 		helperPrintf(os.Stdout, "{\"type\":\"log\",\"level\":\"warning\",\"msg\":\"skipped 2 archived projects\"}\n")
@@ -122,7 +130,13 @@ func helperPrintf(w io.Writer, format string, args ...any) {
 	_, _ = fmt.Fprintf(w, format, args...)
 }
 
+// helperStderrToken is a GitHub-shaped secret the stderr redaction test prints.
+const helperStderrToken = "ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 func helperPluginName() string {
+	if name := os.Getenv("WEEKLOG_HELPER_NAME"); name != "" {
+		return name
+	}
 	if len(os.Args) == 0 {
 		return "helper"
 	}

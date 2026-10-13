@@ -36,6 +36,8 @@ var memorySeq atomic.Uint64
 
 // Open opens a SQLite database at path, creating parent directories and
 // applying migrations. The path ":memory:" opens a private in-memory database.
+// A file-backed store is private to the owner: the directory is created with
+// mode 0700, and the database, WAL, and SHM files are mode 0600.
 func Open(ctx context.Context, path string) (*Store, error) {
 	if ctx == nil {
 		return nil, errors.New("nil context")
@@ -56,8 +58,11 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		if statErr == nil && info.IsDir() {
 			return nil, fmt.Errorf("store path is a directory: %s", abs)
 		}
-		if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(abs), 0o700); err != nil {
 			return nil, fmt.Errorf("create store directory: %w", err)
+		}
+		if err := tightenStoreFiles(abs); err != nil {
+			return nil, err
 		}
 	}
 
@@ -88,7 +93,56 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		_ = db.Close()
 		return nil, err
 	}
+	if path != ":memory:" {
+		// Migrations create the WAL and SHM files. Tighten them after SQLite
+		// has created them, and again in case an existing file was loose.
+		if err := tightenStoreFiles(abs); err != nil {
+			_ = db.Close()
+			return nil, err
+		}
+	}
 	return s, nil
+}
+
+// tightenStoreFiles makes the database and any WAL/SHM siblings owner-readable
+// only. The database file is created with mode 0600 when it does not exist.
+func tightenStoreFiles(abs string) error {
+	if err := ensurePrivateFile(abs, true); err != nil {
+		return err
+	}
+	for _, suffix := range []string{"-wal", "-shm"} {
+		if err := ensurePrivateFile(abs+suffix, false); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensurePrivateFile(path string, create bool) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return fmt.Errorf("stat store file: %w", err)
+		}
+		if !create {
+			return nil
+		}
+		f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
+		if err != nil {
+			return fmt.Errorf("create store file: %w", err)
+		}
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("create store file: %w", err)
+		}
+		return nil
+	}
+	if info.IsDir() || info.Mode().Perm()&0o077 == 0 {
+		return nil
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("tighten store permissions: %w", err)
+	}
+	return nil
 }
 
 // Close releases the database. It is safe to call more than once.

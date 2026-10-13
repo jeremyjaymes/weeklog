@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"os"
 
@@ -27,12 +26,9 @@ A missing config file is a warning. A plugin that fails describe is an error.
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			timeout, err := cmd.Flags().GetDuration("timeout")
+			timeout, err := timeoutFlag(cmd)
 			if err != nil {
 				return err
-			}
-			if timeout <= 0 {
-				return fmt.Errorf("timeout must be positive")
 			}
 			flag, err := cmd.Root().PersistentFlags().GetString("config")
 			if err != nil {
@@ -44,7 +40,7 @@ A missing config file is a warning. A plugin that fails describe is an error.
 			}
 			reg := newSourceRegistry()
 			reg.SetTimeout(timeout)
-			report, err := reg.Doctor(cmdContext(cmd), opts)
+			report, err := reg.Doctor(cmd.Context(), opts)
 			if err != nil {
 				return err
 			}
@@ -57,7 +53,7 @@ A missing config file is a warning. A plugin that fails describe is an error.
 			return nil
 		},
 	}
-	cmd.Flags().Duration("timeout", source.DefaultTimeout, "time limit for each plugin describe")
+	addTimeoutFlag(cmd)
 	return cmd
 }
 

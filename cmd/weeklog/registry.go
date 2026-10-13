@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"github.com/jeremyjaymes/weeklog/internal/source"
 	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/codex"
@@ -9,27 +11,45 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/sources/linear"
 )
 
-// builtinSources are the collectors compiled into this binary, in list order.
-func builtinSources() []struct {
-	name   string
-	source source.Source
-} {
-	return []struct {
-		name   string
-		source source.Source
-	}{
-		{name: "git", source: git.New()},
-		{name: "claude-code", source: claudecode.New()},
-		{name: "codex", source: codex.New()},
-		{name: "github", source: github.New()},
-		{name: "linear", source: linear.New()},
-	}
+type builtin struct {
+	name string
+	src  source.Source
 }
 
+// builtins are the collectors compiled into this binary, in list order.
+// Each name is the one the source reports from Describe, so the string is
+// not duplicated here.
+var builtins = mustBuiltins(
+	git.New(),
+	claudecode.New(),
+	codex.New(),
+	github.New(),
+	linear.New(),
+)
+
+func mustBuiltins(srcs ...source.Source) []builtin {
+	out := make([]builtin, 0, len(srcs))
+	for _, src := range srcs {
+		manifest, err := src.Describe(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		out = append(out, builtin{name: manifest.Name, src: src})
+	}
+	return out
+}
+
+func builtinSources() []builtin {
+	return builtins
+}
+
+// newSourceRegistry registers the built-in sources.
+// It panics if two built-ins share a name. TestNewSourceRegistry constructs
+// the registry so CI catches that.
 func newSourceRegistry() *source.Registry {
 	reg := source.NewRegistry()
-	for _, builtin := range builtinSources() {
-		if err := reg.Register(builtin.name, builtin.source); err != nil {
+	for _, item := range builtins {
+		if err := reg.Register(item.name, item.src); err != nil {
 			panic(err)
 		}
 	}
@@ -37,9 +57,9 @@ func newSourceRegistry() *source.Registry {
 }
 
 func builtinByName(name string) (source.Source, bool) {
-	for _, builtin := range builtinSources() {
-		if builtin.name == name {
-			return builtin.source, true
+	for _, item := range builtins {
+		if item.name == name {
+			return item.src, true
 		}
 	}
 	return nil, false
