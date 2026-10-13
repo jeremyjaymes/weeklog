@@ -89,7 +89,7 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 | `github` | `token` (secret, optional) |
 | `linear` | `token` (secret, required), `ticket_pattern` (regular expression) |
 
-Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. Source type names are case-sensitive (`git`, not `Git`).
+Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).
 
 Path fields (`output.dir`, `output.template`, and `roots`) expand a leading `~`. `~user` paths are not supported.
 
