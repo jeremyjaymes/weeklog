@@ -12,6 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/jeremyjaymes/weeklog/internal/redact"
+
 	_ "modernc.org/sqlite" // pure Go SQLite driver; builds with CGO_ENABLED=0
 )
 
@@ -23,9 +25,11 @@ var ErrNotFound = errors.New("event not found")
 
 // Store is a SQLite database of weeklog events and linker tables.
 // A Store uses one connection. Methods are safe for concurrent use.
+// UpsertEvents redacts string fields before they are written.
 type Store struct {
-	db  *sql.DB
-	now func() time.Time
+	db       *sql.DB
+	now      func() time.Time
+	redactor atomic.Pointer[redact.Redactor]
 }
 
 var memorySeq atomic.Uint64
@@ -75,6 +79,7 @@ func Open(ctx context.Context, path string) (*Store, error) {
 		db:  db,
 		now: func() time.Time { return time.Now().UTC() },
 	}
+	s.redactor.Store(redact.Default())
 	if err := s.migrate(ctx); err != nil {
 		_ = db.Close()
 		return nil, err

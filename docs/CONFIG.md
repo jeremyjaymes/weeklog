@@ -32,7 +32,7 @@ dir = "~/journal/weeklog" # leading ~ is expanded; empty warns at check time
 template = ""             # empty uses the built-in template
 
 [redaction]
-extra_patterns = [] # regular expressions; checked, applied in a later milestone
+extra_patterns = [] # regular expressions applied before events are stored
 allow = []
 
 [[source]]
@@ -95,7 +95,7 @@ Path fields (`output.dir`, `output.template`, and `roots`) expand a leading `~`.
 
 ### Redaction
 
-`extra_patterns` is a list of regular expressions and `allow` is a list of strings. `config check` compiles each extra pattern. Empty entries are an error. The redaction pass that applies these lists is a later milestone; check only stores and validates them.
+`extra_patterns` is a list of regular expressions and `allow` is a list of exact strings that should not be redacted. `config check` compiles each extra pattern. Empty entries are an error. Both lists are applied when events are written. See [REDACTION.md](REDACTION.md).
 
 ## Secrets
 

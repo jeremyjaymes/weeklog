@@ -46,7 +46,8 @@ type Output struct {
 }
 
 // Redaction lists extra redaction patterns and allow-list exceptions.
-// config check compiles ExtraPatterns. Applying them is a later milestone.
+// config check compiles ExtraPatterns. The redact package applies both lists,
+// plus resolved secret values, before events are written.
 type Redaction struct {
 	ExtraPatterns []string
 	Allow         []string
