@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/jeremyjaymes/weeklog/internal/source"
+	"github.com/jeremyjaymes/weeklog/internal/sources/git"
 )
 
 func TestSourcesListsBuiltins(t *testing.T) {
@@ -23,7 +24,7 @@ func TestSourcesListsBuiltins(t *testing.T) {
 		t.Fatalf("stderr = %q", stderr)
 	}
 	for _, name := range []string{"git", "claude-code", "codex", "github", "linear"} {
-		if !strings.Contains(stdout, name+"\tbuiltin\tok\t"+source.BuiltinVersion+"\tbuilt-in\n") {
+		if !strings.Contains(stdout, name+"\tbuiltin\tok\t"+builtinDescribedVersion(name)+"\tbuilt-in\n") {
 			t.Fatalf("stdout missing %s\n%s", name, stdout)
 		}
 	}
@@ -46,7 +47,7 @@ func TestDoctorWarnsWhenConfigAndPluginDirAreMissing(t *testing.T) {
 	}
 	for _, want := range []string{
 		"(not found)",
-		"source git: ok (builtin, protocol 1, version " + source.BuiltinVersion + ")",
+		"source git: ok (builtin, protocol 1, version " + git.Version + ")",
 		"source linear: ok (builtin, protocol 1, version " + source.BuiltinVersion + ")",
 		"2 warnings",
 	} {
@@ -158,10 +159,16 @@ func TestBuiltinsDescribeThroughProtocol(t *testing.T) {
 			if err != nil {
 				t.Fatalf("decode: %v\n%s", err, out)
 			}
-			if manifest.Name != builtin.name || manifest.Protocol != source.ProtocolVersion || manifest.Version != source.BuiltinVersion {
+			if manifest.Name != builtin.name || manifest.Protocol != source.ProtocolVersion || manifest.Version != builtinDescribedVersion(builtin.name) {
 				t.Fatalf("manifest = %#v", manifest)
 			}
 			_, err = builtin.source.Collect(context.Background(), source.CollectRequest{}, nil)
+			if builtin.name == "git" {
+				if !errors.Is(err, source.ErrConfig) {
+					t.Fatalf("collect err = %v, want config error", err)
+				}
+				return
+			}
 			if !errors.Is(err, source.ErrNotImplemented) {
 				t.Fatalf("collect err = %v", err)
 			}
@@ -184,6 +191,13 @@ func TestSourcesAndDoctorHelp(t *testing.T) {
 	if !strings.Contains(stdout, "does not resolve secrets") {
 		t.Fatalf("help = %s\n%s", stdout, stderr)
 	}
+}
+
+func builtinDescribedVersion(name string) string {
+	if name == "git" {
+		return git.Version
+	}
+	return source.BuiltinVersion
 }
 
 func isolatePlugins(t *testing.T) string {
