@@ -110,6 +110,13 @@ func TestCollectPartialSources(t *testing.T) {
 		t.Fatal(err)
 	}
 	plug := `#!/bin/sh
+if [ "$1" = "describe" ]; then
+  printf '%s\n' '{"protocol":1,"name":"plug","version":"0.1.0","config":{"token":{"type":"secret"}}}'
+  exit 0
+fi
+if [ "$1" != "collect" ]; then
+  exit 0
+fi
 req=$(cat)
 printf '%s\n' "$req" > "$HOME/plug-request.json"
 case "$req" in
@@ -125,7 +132,14 @@ esac
 	if err := os.WriteFile(filepath.Join(bin, "weeklog-source-plug"), []byte(plug), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	boom := "#!/bin/sh\nprintf '%s\\n' 'failed weeklog-test-secret' >&2\nexit 1\n"
+	boom := `#!/bin/sh
+if [ "$1" = "describe" ]; then
+  printf '%s\n' '{"protocol":1,"name":"boom","version":"0.1.0","config":{"token":{"type":"secret"}}}'
+  exit 0
+fi
+printf '%s\n' 'failed weeklog-test-secret' >&2
+exit 1
+`
 	if err := os.WriteFile(filepath.Join(bin, "weeklog-source-boom"), []byte(boom), 0o755); err != nil {
 		t.Fatal(err)
 	}
