@@ -2,7 +2,7 @@
 
 An open-source CLI that pulls your week from pluggable sources (git, coding agents, pull requests, and tickets), links the activity into units of work, and writes a plain Markdown weekly log you own.
 
-**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, `weeklog link-run`, and `weeklog week` are implemented.
+**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, `weeklog link-run`, `weeklog link`, `weeklog unlink`, `weeklog explain`, and `weeklog week` are implemented.
 
 ## Quickstart
 
@@ -113,9 +113,14 @@ Pass 2 attaches an agent session that still has no hard link. When its working d
 
 Pass 3 puts events that are still unlinked into leftover items grouped by repository and local day. A session with no commits is its own item. Each item is then marked shipped, in progress, explored, or abandoned.
 
+`weeklog link` and `weeklog unlink` store a correction in the overrides table. The linker applies those rows after pass 3, including on the next `link-run` or `collect`. `weeklog explain` prints each event in the group and the stored reason. `weeklog week` shows the same reasons, including `override:link` and `override:unlink`. See [docs/LINKING.md](docs/LINKING.md).
+
 ```bash
 weeklog link-run
 weeklog link-run --week 2026-W41
+weeklog explain 1
+weeklog link linear/GEN-301 git/0123456789abcdef0123456789abcdef01234567
+weeklog unlink git/0123456789abcdef0123456789abcdef01234567
 ```
 
 ## Week

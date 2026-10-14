@@ -84,6 +84,24 @@ var migrations = []migration{
 		)`,
 		`CREATE INDEX idx_runs_started ON runs (started_at)`,
 	}},
+	{version: 2, stmts: []string{
+		// User link and unlink commands. The linker replays these rows after
+		// pass 3. Deleting an event removes the overrides that name it.
+		`CREATE TABLE overrides (
+			id INTEGER PRIMARY KEY,
+			kind TEXT NOT NULL CHECK (kind IN ('link', 'unlink')),
+			event_a_id INTEGER NOT NULL REFERENCES events (id) ON DELETE CASCADE,
+			event_b_id INTEGER REFERENCES events (id) ON DELETE CASCADE,
+			created_at TEXT NOT NULL,
+			CHECK (
+				(kind = 'link' AND event_b_id IS NOT NULL AND event_a_id <> event_b_id)
+				OR (kind = 'unlink' AND event_b_id IS NULL)
+			)
+		)`,
+		`CREATE INDEX idx_overrides_created ON overrides (created_at, id)`,
+		`CREATE INDEX idx_overrides_event_a ON overrides (event_a_id)`,
+		`CREATE INDEX idx_overrides_event_b ON overrides (event_b_id)`,
+	}},
 }
 
 func (s *Store) migrate(ctx context.Context) error {

@@ -110,6 +110,7 @@ func TestOpenAppliesSchema(t *testing.T) {
 		"work_item_events",
 		"source_state",
 		"runs",
+		"overrides",
 		"schema_migrations",
 	}
 	got := tableNames(t, s)

@@ -452,8 +452,10 @@ func reasonRank(reason string) int {
 		return 7
 	case strings.HasPrefix(reason, "leftover:"), reason == "session only":
 		return 8
-	default:
+	case strings.HasPrefix(reason, "override:"):
 		return 9
+	default:
+		return 10
 	}
 }
 
