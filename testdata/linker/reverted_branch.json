@@ -1,0 +1,50 @@
+{
+  "name": "a reverted branch",
+  "note": "Pass 1 does not treat a reverted SHA as a hard link. Pass 2 joins the revert to the commit it names. A reverted commit is abandoned even though the branch would otherwise be in progress.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T10:00:00Z",
+      "title": "Try Lob adapter",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "experiment"
+    },
+    {
+      "id": 2,
+      "source": "git",
+      "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+      "kind": "commit",
+      "ts": "2026-10-08T12:00:00Z",
+      "title": "Revert \"Try Lob adapter\"",
+      "summary": "Revert \"Try Lob adapter\"\n\nThis reverts commit 0123456789abcdef0123456789abcdef01234567.",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "experiment",
+      "refs": ["0123456789abcdef0123456789abcdef01234567"]
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Try Lob adapter",
+      "status": "abandoned",
+      "because": "The item contains a revert commit, so it is abandoned. The title is the earlier commit subject.",
+      "events": [
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "revert:0123456789abcdef0123456789abcdef01234567",
+          "because": "The later commit says it reverts this SHA."
+        },
+        {
+          "source": "git",
+          "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+          "reason": "revert:0123456789abcdef0123456789abcdef01234567",
+          "because": "The title starts with Revert and the body names the original commit. There is no pull request, so this is not a hard link."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "name": "a ticket key only in a commit message",
+  "note": "The commit does not share a branch, SHA, or pull request with the ticket. The key appears only in the commit message, which is a hard link. The ticket is done and the commit is on a feature branch, so the done ticket wins and the item is shipped.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "linear",
+      "source_id": "GEN-301",
+      "kind": "ticket",
+      "ts": "2026-10-06T09:00:00Z",
+      "title": "Webhook retries",
+      "state": "done"
+    },
+    {
+      "id": 2,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T10:00:00Z",
+      "title": "ship it",
+      "summary": "ship it\n\nThe retry bug is GEN-301.",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Webhook retries",
+      "status": "shipped",
+      "because": "A done ticket is shipped. The feature branch would otherwise be in progress.",
+      "events": [
+        {
+          "source": "linear",
+          "source_id": "GEN-301",
+          "reason": "ref:GEN-301 ticket",
+          "because": "The ticket's own key is GEN-301."
+        },
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "ref:GEN-301 in commit message",
+          "because": "GEN-301 appears in the commit body and nowhere else on the commit."
+        }
+      ]
+    }
+  ]
+}

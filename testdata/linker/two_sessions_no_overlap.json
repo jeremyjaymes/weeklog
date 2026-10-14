@@ -1,0 +1,96 @@
+{
+  "name": "two sessions in the same repo with no shared files",
+  "note": "The sessions overlap in time and neither shares a file with the commits, so neither is the only session in the window. The commits are not guessed onto a session. Each session becomes an explored item. The commits share a repository and a UTC day, so they are one in-progress leftover.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "claude-code",
+      "source_id": "sess-a",
+      "kind": "agent_session",
+      "ts": "2026-10-08T10:00:00Z",
+      "ts_end": "2026-10-08T12:00:00Z",
+      "title": "Webhooks spike",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 2,
+      "source": "claude-code",
+      "source_id": "sess-b",
+      "kind": "agent_session",
+      "ts": "2026-10-08T11:00:00Z",
+      "ts_end": "2026-10-08T13:00:00Z",
+      "title": "Billing spike",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 3,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T12:30:00Z",
+      "title": "Update webhooks",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 4,
+      "source": "git",
+      "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+      "kind": "commit",
+      "ts": "2026-10-08T13:30:00Z",
+      "title": "Update billing",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "cwd": "/Users/j/Projects/otto"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Webhooks spike",
+      "status": "explored",
+      "because": "The session has no commits of its own, so it is explored.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-a",
+          "reason": "session only",
+          "because": "Another session overlaps the window and no file is shared, so the session does not claim the commits."
+        }
+      ]
+    },
+    {
+      "title": "Billing spike",
+      "status": "explored",
+      "because": "The second session also has no commits.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-b",
+          "reason": "session only",
+          "because": "It is not the only session in the window, and it shares no files with either commit."
+        }
+      ]
+    },
+    {
+      "title": "Update webhooks",
+      "status": "in progress",
+      "because": "The two commits are still unlinked. They share a repository and a day. The feature branch keeps the item in progress. The title is the earlier commit subject because the subjects tie.",
+      "events": [
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "leftover:github.com/jeremyjaymes/otto 2026-10-08",
+          "because": "No session claimed this commit."
+        },
+        {
+          "source": "git",
+          "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+          "reason": "leftover:github.com/jeremyjaymes/otto 2026-10-08",
+          "because": "Same repository and same UTC day as the other unclaimed commit."
+        }
+      ]
+    }
+  ]
+}

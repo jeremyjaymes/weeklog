@@ -19,20 +19,33 @@ import (
 func newLinkRunCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "link-run",
-		Short: "Recompute hard links for stored events",
-		Long: `Recompute pass-1 hard links for every stored event.
+		Short: "Recompute work items for stored events",
+		Long: `Recompute work items for every stored event.
 
-A commit joins a pull request when that pull request lists the commit SHA.
-A ticket key joins the events that mention it. A pull request joins commits
-and sessions on its head branch in the same repository. A pull request joins
-its reviews when their source ids share a lineage. Each link stores the
-reason it was made.
+Pass 1 stores a hard-link reason. A commit joins a pull request when that
+pull request lists the commit SHA. A ticket key joins the events that mention
+it. A pull request joins commits and sessions on its head branch in the same
+repository. A pull request joins its reviews when their source ids share a
+lineage.
 
-The window flags match weeklog collect. Pass 1 still reads every stored
-event, so a commit can join a ticket collected in another week. --week takes
-an ISO week, YYYY-Www. --since and --until accept RFC3339 timestamps or
-YYYY-MM-DD dates. --until is exclusive. With no window flags, the window is
-the previous full week in the configured timezone.
+Pass 2 stores a soft-link reason on an event that pass 1 left ungrouped. An
+agent session joins commits in the repository its working directory resolves
+to when they share a file and were authored between the session start and two
+hours after the session end. With no shared file, the session joins those
+commits only when it is the only session in the window. A session also joins
+a branch named by a git checkout or switch. A revert joins the commit it
+reverts.
+
+Pass 3 groups anything still unlinked by repository and local day. A session
+with no commits stays its own item. Each item then gets a status: shipped,
+in progress, explored, or abandoned.
+
+The window flags match weeklog collect. Linking still reads every stored
+event, so a commit can join a ticket collected in another week. The window
+end is the clock for a stale branch, and its timezone chooses the local day.
+--week takes an ISO week, YYYY-Www. --since and --until accept RFC3339
+timestamps or YYYY-MM-DD dates. --until is exclusive. With no window flags,
+the window is the previous full week in the configured timezone.
 
 Ticket keys come from each source's ticket_pattern. When none is set,
 weeklog uses a built-in key shape such as GEN-301.

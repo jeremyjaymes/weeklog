@@ -1,0 +1,55 @@
+{
+  "name": "a session with no commits",
+  "note": "The session never resolves to a commit. It becomes its own explored item. A commit in a different repository on the same day stays a separate leftover and is shipped because it is on main.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "claude-code",
+      "source_id": "sess-1",
+      "kind": "agent_session",
+      "ts": "2026-10-08T10:00:00Z",
+      "title": "Try Lob adapter spike",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 2,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T11:00:00Z",
+      "title": "Elsewhere",
+      "repo": "github.com/jeremyjaymes/other",
+      "branch": "main",
+      "cwd": "/tmp/other"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Try Lob adapter spike",
+      "status": "explored",
+      "because": "A session with no commits is explored. The title is the session prompt.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-1",
+          "reason": "session only",
+          "because": "No commit shares this session's repository. The other repo's checkout does not resolve the otto working directory."
+        }
+      ]
+    },
+    {
+      "title": "Elsewhere",
+      "status": "shipped",
+      "because": "The commit is a leftover on the default branch, so it is shipped.",
+      "events": [
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "leftover:github.com/jeremyjaymes/other 2026-10-08",
+          "because": "The commit is unlinked and is grouped by its own repository and day."
+        }
+      ]
+    }
+  ]
+}

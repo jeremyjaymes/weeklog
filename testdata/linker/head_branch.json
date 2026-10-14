@@ -1,0 +1,66 @@
+{
+  "name": "HEAD branch at commit time",
+  "note": "The only session shares no files with the commit. Every commit in the window is on feature/pay, so that branch is HEAD at commit time and the session joins it. The open pull request marks the item in progress.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "claude-code",
+      "source_id": "sess-1",
+      "kind": "agent_session",
+      "ts": "2026-10-08T14:00:00Z",
+      "ts_end": "2026-10-08T15:30:00Z",
+      "title": "Investigate pay",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 2,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T15:00:00Z",
+      "title": "Handle pay",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 3,
+      "source": "github",
+      "source_id": "acme/otto#4",
+      "kind": "pr",
+      "ts": "2026-10-08T16:00:00Z",
+      "title": "Handle pay",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "state": "open"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Handle pay",
+      "status": "in progress",
+      "because": "The pull request is open. The session joined the commit, which was already on the pull request.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-1",
+          "reason": "head branch:feature/pay",
+          "because": "This is the only session in the window, and the only branch on commits in that window is feature/pay."
+        },
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "branch:feature/pay, head branch:feature/pay",
+          "because": "Pass 1 joins the commit to the pull request by branch. Pass 2 also records that the session matched HEAD."
+        },
+        {
+          "source": "github",
+          "source_id": "acme/otto#4",
+          "reason": "branch:feature/pay",
+          "because": "The pull request head branch matches the commit. The session is in the item because it joined the commit."
+        }
+      ]
+    }
+  ]
+}

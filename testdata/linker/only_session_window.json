@@ -1,0 +1,64 @@
+{
+  "name": "only session in the window",
+  "note": "One session and two commits share a repository and a time window, but they share no files and the commits have no branch. The session is the only one in the window, so both commits join it. Nothing in the status rules matches, so the status stays empty.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "claude-code",
+      "source_id": "sess-1",
+      "kind": "agent_session",
+      "ts": "2026-10-08T10:00:00Z",
+      "ts_end": "2026-10-08T11:00:00Z",
+      "title": "Poke around",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 2,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T11:30:00Z",
+      "title": "First note",
+      "repo": "github.com/jeremyjaymes/otto",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 3,
+      "source": "git",
+      "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+      "kind": "commit",
+      "ts": "2026-10-08T12:00:00Z",
+      "title": "Second note",
+      "repo": "github.com/jeremyjaymes/otto",
+      "cwd": "/Users/j/Projects/otto"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "First note",
+      "status": "",
+      "because": "The commits have no branch, pull request, or ticket. The title is the earlier commit subject.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-1",
+          "reason": "only session in window",
+          "because": "No other session overlaps this window, and the commits have no files or branch to match more specifically."
+        },
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "only session in window",
+          "because": "The commit is inside the session start through two hours after the session end."
+        },
+        {
+          "source": "git",
+          "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+          "reason": "only session in window",
+          "because": "The second commit is in the same window and there is still only one session."
+        }
+      ]
+    }
+  ]
+}

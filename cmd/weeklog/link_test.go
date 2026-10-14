@@ -76,7 +76,7 @@ ticket_pattern = "GEN-\\d+"
 	for _, want := range []string{
 		"db: " + dbPath,
 		"window: 2026-W41 (2026-10-05T00:00:00Z .. 2026-10-12T00:00:00Z)",
-		"link: ok (1 work item)",
+		"link: ok (2 work items)",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("stdout missing %q\n%s", want, stdout)
@@ -88,11 +88,17 @@ ticket_pattern = "GEN-\\d+"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 1 || items[0].Title != "Webhook retries" || len(items[0].Events) != 2 {
+	if len(items) != 2 || items[0].Title != "Webhook retries" || items[0].Status != "" || len(items[0].Events) != 2 {
 		t.Fatalf("items = %+v", items)
 	}
 	if items[0].Events[0].Reason != "ref:GEN-301 ticket" || items[0].Events[1].Reason != "ref:GEN-301 in commit message" {
 		t.Fatalf("reasons = %+v", items[0].Events)
+	}
+	if items[1].Title != "Other" || len(items[1].Events) != 1 || items[1].Events[0].SourceID != "ABC-99" {
+		t.Fatalf("leftover = %+v", items[1])
+	}
+	if items[1].Events[0].Reason != "leftover:- 2026-10-06" {
+		t.Fatalf("leftover reason = %+v", items[1].Events[0])
 	}
 }
 

@@ -68,7 +68,7 @@ func TestRunPersistsHardLinksAndReruns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(first) != 1 || first[0].ID != 1 || first[0].Title != "Webhook retries" || first[0].Status != "" {
+	if len(first) != 2 || first[0].ID != 1 || first[0].Title != "Webhook retries" || first[0].Status != StatusShipped {
 		t.Fatalf("first = %+v", first)
 	}
 	if len(first[0].Events) != 2 {
@@ -80,6 +80,12 @@ func TestRunPersistsHardLinksAndReruns(t *testing.T) {
 	if first[0].Events[1].SourceID != fullSHA || first[0].Events[1].Reason != "ref:GEN-301 in commit message" {
 		t.Fatalf("commit = %+v", first[0].Events[1])
 	}
+	if first[1].Title != "unrelated" || first[1].Status != StatusShipped || len(first[1].Events) != 1 {
+		t.Fatalf("leftover = %+v", first[1])
+	}
+	if first[1].Events[0].SourceID != otherSHA || first[1].Events[0].Reason != "leftover:"+repoOtto+" 2026-10-08" {
+		t.Fatalf("leftover event = %+v", first[1].Events[0])
+	}
 
 	if err := Run(context.Background(), st, since, until); err != nil {
 		t.Fatal(err)
@@ -88,11 +94,14 @@ func TestRunPersistsHardLinksAndReruns(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(second) != 1 || second[0].ID != first[0].ID || second[0].Title != first[0].Title {
+	if len(second) != 2 || second[0].ID != first[0].ID || second[0].Title != first[0].Title || second[0].Status != first[0].Status {
 		t.Fatalf("rerun = %+v", second)
 	}
 	if second[0].Events[0].Reason != first[0].Events[0].Reason || second[0].Events[1].Reason != first[0].Events[1].Reason {
 		t.Fatalf("rerun reasons = %+v", second[0].Events)
+	}
+	if second[1].Title != first[1].Title || second[1].Events[0].Reason != first[1].Events[0].Reason {
+		t.Fatalf("rerun leftover = %+v", second[1])
 	}
 }
 
@@ -153,8 +162,50 @@ func TestRunClearsStaleHardLinks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 0 {
+	if len(items) != 1 || items[0].Title != "alone" || items[0].Status != "" || len(items[0].Events) != 1 {
 		t.Fatalf("items = %+v", items)
+	}
+	if items[0].Events[0].Reason != "leftover:- 2026-10-08" {
+		t.Fatalf("reason = %+v", items[0].Events[0])
+	}
+}
+
+func TestRunPersistsSoftLink(t *testing.T) {
+	st := openLinkerStore(t)
+	end := at(8, 11)
+	if _, err := st.UpsertEvents(context.Background(), []event.Event{
+		{
+			Source: "claude-code", SourceID: "sess-1", Kind: event.KindAgentSession,
+			TS: at(8, 10), TSEnd: &end, Title: "Edit webhooks",
+			CWD: cwdOtto, Files: []string{"app/Webhooks.php"},
+		},
+		{
+			Source: "git", SourceID: fullSHA, Kind: event.KindCommit,
+			TS: at(8, 12), Title: "Fix webhooks",
+			Repo: repoOtto, Branch: "feature/pay", CWD: cwdOtto,
+			Files: []string{"app/Webhooks.php"},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := Run(context.Background(), st, at(5, 0), at(12, 0)); err != nil {
+		t.Fatal(err)
+	}
+	items, err := st.ListWorkItems(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Title != "Fix webhooks" || items[0].Status != StatusInProgress {
+		t.Fatalf("items = %+v", items)
+	}
+	if len(items[0].Events) != 2 {
+		t.Fatalf("events = %+v", items[0].Events)
+	}
+	if items[0].Events[0].SourceID != "sess-1" || items[0].Events[0].Reason != "files overlap: 1" {
+		t.Fatalf("session = %+v", items[0].Events[0])
+	}
+	if items[0].Events[1].SourceID != fullSHA || items[0].Events[1].Reason != "files overlap: 1" {
+		t.Fatalf("commit = %+v", items[0].Events[1])
 	}
 }
 
