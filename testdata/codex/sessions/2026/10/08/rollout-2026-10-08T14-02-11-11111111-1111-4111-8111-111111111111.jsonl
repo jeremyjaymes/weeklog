@@ -1,0 +1,13 @@
+{"timestamp":"2026-10-08T14:02:11.000Z","type":"session_meta","payload":{"id":"11111111-1111-4111-8111-111111111111","timestamp":"2026-10-08T14:02:11.000Z","cwd":"/Users/j/Projects/otto","originator":"codex-tui","cli_version":"0.0.0","source":"cli","model_provider":"openai","git":{"commit_hash":"abc123","branch":"cursor/fix-webhooks","repository_url":"git@github.com:jeremyjaymes/otto.git"}}}
+{"timestamp":"2026-10-08T14:02:11.500Z","type":"turn_context","payload":{"cwd":"/should/not/replace","turn_id":"t1"}}
+{"timestamp":"2026-10-08T14:02:12.000Z","type":"event_msg","payload":{"type":"user_message","message":"Fix Stripe webhook retries","kind":"plain"}}
+{"timestamp":"2026-10-08T14:02:13.000Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"SHOULD NOT BE THE TITLE"}]}}
+{"timestamp":"2026-10-08T14:02:14.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"should not replace the first prompt"}]}}
+{"timestamp":"2026-10-08T14:03:00.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","call_id":"call_shell","arguments":"{\"command\":\"cat /tmp/SHOULD NOT APPEAR app/not-a-edited-file.go\"}"}}
+{"timestamp":"2026-10-08T14:04:00.000Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"call_1","arguments":"{\"input\":\"*** Begin Patch\\n*** Update File: /Users/j/Projects/otto/app/Webhooks.php\\n*** End Patch\"}"}}
+{"timestamp":"2026-10-08T14:05:00.000Z","type":"response_item","payload":{"type":"custom_tool_call","name":"apply_patch","call_id":"call_2","input":"*** Begin Patch\n*** Add File: /Users/j/Projects/otto/app/retry.go\n+package retry\n*** Update File: docs/notes.md\n*** Delete File: /tmp/outside.txt\n*** Update File: /Users/j/Projects/otto/app/Webhooks.php\n*** End Patch"}}
+{"timestamp":"2026-10-08T14:06:00.000Z","type":"event_msg","payload":{"type":"token_count","info":null}}
+{"timestamp":"2026-10-08T14:07:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1000,"cached_input_tokens":200,"output_tokens":400,"reasoning_output_tokens":50,"total_tokens":1400}}}}
+{"timestamp":"2026-10-08T15:40:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1200,"cached_input_tokens":350,"output_tokens":800,"reasoning_output_tokens":20,"total_tokens":2000},"last_token_usage":{"input_tokens":200,"output_tokens":400}}}}
+{this is not json
+null
