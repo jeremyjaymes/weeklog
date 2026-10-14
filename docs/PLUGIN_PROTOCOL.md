@@ -155,7 +155,7 @@ Any other non-zero code is a failure. stderr is redacted, collapsed to one line,
 
 ## Built-in sources
 
-`git`, `claude-code`, `codex`, `github`, and `linear` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. The git collector reads commits from local repositories and describes version `0.1.0`. The claude-code collector reads local Claude Code session transcripts and describes version `0.1.0`. Its cursor records each transcript file's size and modification time. The github collector reads pull requests, reviews, and issues from the GitHub GraphQL API and describes version `0.1.0`. It uses the configured token, or `gh auth token` when the token is unset. It does not keep a cursor; the next collect reads the window again. `codex` and `linear` do not collect yet: `collect` returns an error until a later milestone, and describe returns protocol 1 and version `0.0.0`.
+`git`, `claude-code`, `codex`, `github`, and `linear` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. The git collector reads commits from local repositories and describes version `0.1.0`. The claude-code collector reads local Claude Code session transcripts and describes version `0.1.0`. Its cursor records each transcript file's size and modification time. The github collector reads pull requests, reviews, and issues from the GitHub GraphQL API and describes version `0.1.0`. It uses the configured token, or `gh auth token` when the token is unset. It does not keep a cursor; the next collect reads the window again. The linear collector reads issues and state history from the Linear GraphQL API and describes version `0.1.0`. It uses the configured token. Keys that match `ticket_pattern` are stored on each event; when the pattern is omitted, the built-in ticket shape is used. It does not keep a cursor; the next collect reads the window again. `codex` does not collect yet: `collect` returns an error until a later milestone, and describe returns protocol 1 and version `0.0.0`.
 
 | Name | Config |
 |---|---|
@@ -177,7 +177,7 @@ Both commands accept `--timeout` (default `120s`).
 
 A source whose collector is not implemented yet is skipped and listed. A source that fails does not stop the others. Events from sources that succeed are stored, then the linker runs. The cursor is saved only after a source succeeds. Cancelling the command stops the current source and does not start another. The command exits 0 when every selected source succeeded or was skipped. It exits 1 when a source fails or linking fails; events already stored are kept.
 
-`codex` and `linear` still return the not-implemented collector error, so collect skips them.
+`codex` still returns the not-implemented collector error, so collect skips it.
 
 ## Example
 

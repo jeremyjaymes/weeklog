@@ -14,6 +14,7 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/git"
 	"github.com/jeremyjaymes/weeklog/internal/sources/github"
+	"github.com/jeremyjaymes/weeklog/internal/sources/linear"
 )
 
 func TestSourcesListsBuiltins(t *testing.T) {
@@ -50,7 +51,7 @@ func TestDoctorWarnsWhenConfigAndPluginDirAreMissing(t *testing.T) {
 	for _, want := range []string{
 		"(not found)",
 		"source git: ok (builtin, protocol 1, version " + git.Version + ")",
-		"source linear: ok (builtin, protocol 1, version " + source.BuiltinVersion + ")",
+		"source linear: ok (builtin, protocol 1, version " + linear.Version + ")",
 		"2 warnings",
 	} {
 		if !strings.Contains(stdout, want) {
@@ -165,7 +166,7 @@ func TestBuiltinsDescribeThroughProtocol(t *testing.T) {
 				t.Fatalf("manifest = %#v", manifest)
 			}
 			_, err = builtin.src.Collect(context.Background(), source.CollectRequest{}, nil)
-			if builtin.name == "git" || builtin.name == "claude-code" || builtin.name == "github" {
+			if builtin.name == "git" || builtin.name == "claude-code" || builtin.name == "github" || builtin.name == "linear" {
 				if !errors.Is(err, source.ErrConfig) {
 					t.Fatalf("collect err = %v, want config error", err)
 				}
@@ -203,6 +204,8 @@ func builtinDescribedVersion(name string) string {
 		return claudecode.Version
 	case "github":
 		return github.Version
+	case "linear":
+		return linear.Version
 	default:
 		return source.BuiltinVersion
 	}

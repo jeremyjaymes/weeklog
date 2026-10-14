@@ -1,0 +1,108 @@
+{
+  "data": {
+    "issues": {
+      "pageInfo": { "hasNextPage": false, "endCursor": null },
+      "nodes": [
+        {
+          "__typename": "Issue",
+          "id": "55555555-5555-4555-8555-555555555555",
+          "identifier": "GEN-500",
+          "title": "Spike the adapter",
+          "description": "",
+          "url": "https://linear.app/genesee/issue/GEN-500/spike-the-adapter",
+          "branchName": "jeremy/gen-500-spike",
+          "createdAt": "2026-10-09T08:00:00Z",
+          "updatedAt": "2026-10-09T08:00:00Z",
+          "state": { "name": "Todo", "type": "unstarted" },
+          "creator": { "name": "Alice", "displayName": "Alice", "email": "alice@example.com" },
+          "assignee": null,
+          "history": {
+            "pageInfo": { "hasNextPage": false, "endCursor": null },
+            "nodes": [
+              {
+                "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+                "createdAt": "2026-10-09T08:00:00.000Z",
+                "fromState": null,
+                "toState": { "name": "Todo", "type": "unstarted" },
+                "actor": { "displayName": "Alice" }
+              },
+              {
+                "id": "99999999-9999-4999-8999-999999999999",
+                "createdAt": "2026-10-09T08:30:00.000Z",
+                "fromState": null,
+                "toState": null,
+                "actor": { "displayName": "Alice" }
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "Issue",
+          "id": "22222222-2222-4222-8222-222222222222",
+          "identifier": "GEN-220",
+          "title": "Ship the gate",
+          "description": "Done.",
+          "url": "https://linear.app/genesee/issue/GEN-220/ship-the-gate",
+          "branchName": "feature/GEN-220-gate",
+          "createdAt": "2026-10-02T00:00:00.000Z",
+          "updatedAt": "2026-10-10T12:00:00.000Z",
+          "completedAt": "2026-10-10T12:00:00.000Z",
+          "state": { "name": "Done", "type": "completed" },
+          "creator": { "displayName": "Alice" },
+          "history": {
+            "pageInfo": { "hasNextPage": false, "endCursor": null },
+            "nodes": [
+              {
+                "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+                "createdAt": "2026-10-10T12:00:00.000Z",
+                "fromState": { "name": "In Review", "type": "started" },
+                "toState": { "name": "Done", "type": "completed" },
+                "actor": { "displayName": "Alice" }
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "Issue",
+          "id": "12121212-1212-4121-8121-121212121212",
+          "identifier": "ABC-12",
+          "title": "Unrelated cleanup",
+          "description": "Documented as ISO-8601.",
+          "url": "https://linear.app/genesee/issue/ABC-12/unrelated-cleanup",
+          "branchName": "cleanup",
+          "createdAt": "2026-10-11T10:00:00.000Z",
+          "updatedAt": "2026-10-11T15:00:00.000Z",
+          "canceledAt": "2026-10-11T15:00:00.000Z",
+          "state": { "name": "Canceled", "type": "canceled" },
+          "creator": { "displayName": "Cara" },
+          "history": {
+            "pageInfo": { "hasNextPage": false, "endCursor": null },
+            "nodes": [
+              {
+                "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+                "createdAt": "2026-10-11T15:00:00.000Z",
+                "fromState": { "name": "In Progress", "type": "started" },
+                "toState": { "name": "Canceled", "type": "canceled" },
+                "actor": { "displayName": "Cara" }
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "Issue",
+          "id": "11111111-1111-4111-8111-111111111112",
+          "identifier": "GEN-301",
+          "title": "duplicate",
+          "description": "Should not be emitted twice.",
+          "url": "https://linear.app/genesee/issue/GEN-301/fix-stripe-webhook-retries",
+          "branchName": "cursor/fix-webhooks",
+          "createdAt": "2026-10-01T12:00:00.000Z",
+          "updatedAt": "2026-10-08T18:00:00.000Z",
+          "state": { "name": "In Progress", "type": "started" },
+          "creator": { "displayName": "Alice" },
+          "history": { "pageInfo": { "hasNextPage": false, "endCursor": null }, "nodes": [] }
+        }
+      ]
+    }
+  }
+}
