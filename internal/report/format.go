@@ -350,6 +350,8 @@ func reasonRank(reason string) int {
 		return 3
 	case strings.HasPrefix(reason, "files overlap"):
 		return 4
+	case strings.HasPrefix(reason, "override:"):
+		return 6
 	default:
 		return 5
 	}

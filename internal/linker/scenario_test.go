@@ -16,8 +16,8 @@ import (
 
 // TestLinkerFixtures runs the plan's linker scenarios from testdata/linker.
 // Each file is an event set plus the work_items snapshot, and each link has
-// a because note that says why that reason was stored. Manual link and unlink
-// overrides are a later pass and are not applied here.
+// a because note that says why that reason was stored. These fixtures do not
+// include manual overrides. Run applies stored overrides after pass 3.
 func TestLinkerFixtures(t *testing.T) {
 	paths, err := filepath.Glob("../../testdata/linker/*.json")
 	if err != nil {

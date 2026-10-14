@@ -40,6 +40,10 @@ Pass 3 groups anything still unlinked by repository and local day. A session
 with no commits stays its own item. Each item then gets a status: shipped,
 in progress, explored, or abandoned.
 
+weeklog link and weeklog unlink store overrides. This command applies those
+overrides after pass 3. They are kept for the next link run and the next
+collect.
+
 The window flags match weeklog collect. Linking still reads every stored
 event, so a commit can join a ticket collected in another week. The window
 end is the clock for a stale branch, and its timezone chooses the local day.
@@ -56,90 +60,141 @@ The database is the same file weeklog collect uses. --db selects another file.`,
   weeklog link-run --since 2026-10-05 --until 2026-10-12`,
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			flag, err := cmd.Root().PersistentFlags().GetString("config")
-			if err != nil {
-				return err
-			}
-			path, err := config.ResolveConfigPath(flag)
-			if err != nil {
-				return err
-			}
-			cfg, err := config.Load(path)
-			if err != nil {
-				return err
-			}
-			loc, err := cfg.Identity.Location()
-			if err != nil {
-				return err
-			}
-			weekStart, err := cfg.Identity.WeekStart()
-			if err != nil {
-				return err
-			}
-			week, err := cmd.Flags().GetString("week")
-			if err != nil {
-				return err
-			}
-			since, err := cmd.Flags().GetString("since")
-			if err != nil {
-				return err
-			}
-			until, err := cmd.Flags().GetString("until")
-			if err != nil {
-				return err
-			}
-			window, err := linkWindow(week, since, until, loc, weekStart)
-			if err != nil {
-				return err
-			}
-			dbFlag, err := cmd.Flags().GetString("db")
-			if err != nil {
-				return err
-			}
-			dbPath, err := resolveDBPath(dbFlag)
-			if err != nil {
-				return err
-			}
-			patterns := linker.TicketPatterns(cfg)
-			for _, pattern := range patterns {
-				if _, err := regexp.Compile(pattern); err != nil {
-					return fmt.Errorf("ticket_pattern %q: %w", pattern, err)
-				}
-			}
-			ctx := cmd.Context()
-			if ctx == nil {
-				ctx = context.Background()
-			}
-			st, err := store.Open(ctx, dbPath)
-			if err != nil {
-				return err
-			}
-			defer func() { _ = st.Close() }()
-
-			opt := linker.Options{}
-			if len(patterns) > 0 {
-				opt.TicketPatterns = patterns
-			}
-			if err := linker.RunWith(ctx, st, window.Since, window.Until, opt); err != nil {
-				return err
-			}
-			items, err := st.ListWorkItems(ctx)
-			if err != nil {
-				return err
-			}
-			out := cmd.OutOrStdout()
-			if _, err := fmt.Fprintf(out, "db: %s\n%s\nlink: ok (%s)\n", dbPath, formatLinkWindow(window), workItemCount(len(items))); err != nil {
-				return err
-			}
-			return nil
-		},
+		RunE:         runLinkRun,
 	}
+	addLinkFlags(cmd)
+	return cmd
+}
+
+func runLinkRun(cmd *cobra.Command, _ []string) error {
+	session, err := openLinkSession(cmd)
+	if err != nil {
+		return err
+	}
+	defer session.close()
+	n, err := session.relink()
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(cmd.OutOrStdout(), "db: %s\n%s\nlink: ok (%s)\n", session.dbPath, formatLinkWindow(session.window), workItemCount(n))
+	return err
+}
+
+// linkSession is one configured linker run against an open store.
+type linkSession struct {
+	st     *store.Store
+	window timeutil.Window
+	dbPath string
+	opt    linker.Options
+	ctx    context.Context
+}
+
+func (s *linkSession) close() {
+	if s != nil && s.st != nil {
+		_ = s.st.Close()
+	}
+}
+
+func (s *linkSession) relink() (int, error) {
+	if err := linker.RunWith(s.ctx, s.st, s.window.Since, s.window.Until, s.opt); err != nil {
+		return 0, err
+	}
+	items, err := s.st.ListWorkItems(s.ctx)
+	if err != nil {
+		return 0, err
+	}
+	return len(items), nil
+}
+
+func addLinkFlags(cmd *cobra.Command) {
 	cmd.Flags().String("week", "", "ISO week to select (YYYY-Www)")
 	cmd.Flags().String("since", "", "window start (RFC3339 or YYYY-MM-DD)")
 	cmd.Flags().String("until", "", "window end, exclusive (RFC3339 or YYYY-MM-DD)")
 	cmd.Flags().String("db", "", "SQLite database (default is the weeklog data directory)")
-	return cmd
+}
+
+// openLinkSession loads config, validates ticket patterns, and opens the
+// database. Patterns are checked before the database is created.
+func openLinkSession(cmd *cobra.Command) (*linkSession, error) {
+	cfg, loc, weekStart, err := loadLinkConfig(cmd)
+	if err != nil {
+		return nil, err
+	}
+	week, err := cmd.Flags().GetString("week")
+	if err != nil {
+		return nil, err
+	}
+	since, err := cmd.Flags().GetString("since")
+	if err != nil {
+		return nil, err
+	}
+	until, err := cmd.Flags().GetString("until")
+	if err != nil {
+		return nil, err
+	}
+	window, err := linkWindow(week, since, until, loc, weekStart)
+	if err != nil {
+		return nil, err
+	}
+	dbFlag, err := cmd.Flags().GetString("db")
+	if err != nil {
+		return nil, err
+	}
+	dbPath, err := resolveDBPath(dbFlag)
+	if err != nil {
+		return nil, err
+	}
+	patterns := linker.TicketPatterns(cfg)
+	for _, pattern := range patterns {
+		if _, err := regexp.Compile(pattern); err != nil {
+			return nil, fmt.Errorf("ticket_pattern %q: %w", pattern, err)
+		}
+	}
+	ctx := commandContext(cmd)
+	st, err := store.Open(ctx, dbPath)
+	if err != nil {
+		return nil, err
+	}
+	opt := linker.Options{}
+	if len(patterns) > 0 {
+		opt.TicketPatterns = patterns
+	}
+	return &linkSession{st: st, window: window, dbPath: dbPath, opt: opt, ctx: ctx}, nil
+}
+
+func loadLinkConfig(cmd *cobra.Command) (*config.Config, *time.Location, time.Weekday, error) {
+	flag, err := cmd.Root().PersistentFlags().GetString("config")
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	path, err := config.ResolveConfigPath(flag)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	cfg, err := config.Load(path)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	loc, err := cfg.Identity.Location()
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	weekStart, err := cfg.Identity.WeekStart()
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	return cfg, loc, weekStart, nil
+}
+
+func commandContext(cmd *cobra.Command) context.Context {
+	if cmd == nil {
+		return context.Background()
+	}
+	ctx := cmd.Context()
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
 }
 
 func linkWindow(week, since, until string, loc *time.Location, weekStart time.Weekday) (timeutil.Window, error) {

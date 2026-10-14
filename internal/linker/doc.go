@@ -26,6 +26,7 @@
 // session that is still alone becomes its own item. Every link stores a
 // reason. Status is shipped, in progress, explored, or abandoned.
 //
-// Run replaces the work items in the store. There is no LLM. Manual link
-// overrides are a later pass.
+// Run replaces the work items in the store. There is no LLM. Manual link and
+// unlink overrides are loaded from the store and applied after pass 3, so
+// they can join two hard-link groups or pull an event back out.
 package linker

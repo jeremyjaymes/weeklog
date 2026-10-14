@@ -18,7 +18,7 @@ import (
 )
 
 // SchemaVersion is the migration version this binary applies.
-const SchemaVersion = 1
+const SchemaVersion = 2
 
 // ErrNotFound is returned when an event row does not exist.
 var ErrNotFound = errors.New("event not found")

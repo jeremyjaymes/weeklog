@@ -20,7 +20,7 @@ type Options struct {
 // Linking still reads every stored event, so a commit in this window can join
 // a ticket that was collected earlier. until is the clock for stale branches,
 // and its location chooses the local day for leftovers. The work items in st
-// are replaced.
+// are replaced. Stored link and unlink overrides are applied after pass 3.
 func Run(ctx context.Context, st *store.Store, since, until time.Time) error {
 	return RunWith(ctx, st, since, until, Options{})
 }
@@ -44,10 +44,14 @@ func RunWith(ctx context.Context, st *store.Store, since, until time.Time, opt O
 	if err != nil {
 		return err
 	}
+	overrides, err := st.ListOverrides(ctx)
+	if err != nil {
+		return err
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	items := linkEvents(events, matcher.res, matcher.deny, until, until.Location())
+	items := linkEventsWith(events, matcher.res, matcher.deny, until, until.Location(), overrides)
 	drafts := make([]store.WorkItemDraft, len(items))
 	for i, item := range items {
 		links := make([]store.WorkItemLink, len(item.Events))

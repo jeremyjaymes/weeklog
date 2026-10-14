@@ -76,14 +76,37 @@ func (s *Store) UpsertEvents(ctx context.Context, events []event.Event) (UpsertR
 
 // GetEvent loads the event with the given dedupe key.
 func (s *Store) GetEvent(ctx context.Context, source, sourceID string) (Record, error) {
+	rec, err := s.getEventWhere(ctx, `WHERE source = ? AND source_id = ?`, source, sourceID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Record{}, fmt.Errorf("event %s/%s: %w", source, sourceID, ErrNotFound)
+	}
+	if err != nil {
+		return Record{}, err
+	}
+	return rec, nil
+}
+
+// GetEventByID loads the event with the given row id.
+func (s *Store) GetEventByID(ctx context.Context, id int64) (Record, error) {
+	if id <= 0 {
+		return Record{}, fmt.Errorf("event %d: %w", id, ErrNotFound)
+	}
+	rec, err := s.getEventWhere(ctx, `WHERE id = ?`, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Record{}, fmt.Errorf("event %d: %w", id, ErrNotFound)
+	}
+	if err != nil {
+		return Record{}, err
+	}
+	return rec, nil
+}
+
+func (s *Store) getEventWhere(ctx context.Context, where string, args ...any) (Record, error) {
 	var rec Record
 	err := s.withTx(ctx, func(tx *sql.Tx) error {
-		row := tx.QueryRowContext(ctx, eventSelect+` WHERE source = ? AND source_id = ?`, source, sourceID)
+		row := tx.QueryRowContext(ctx, eventSelect+" "+where, args...)
 		var err error
 		rec, err = scanEvent(row)
-		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("event %s/%s: %w", source, sourceID, ErrNotFound)
-		}
 		if err != nil {
 			return err
 		}
