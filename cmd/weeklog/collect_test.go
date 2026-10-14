@@ -42,9 +42,6 @@ dir = "/tmp/weeklog-out"
 type = "codex"
 
 [[source]]
-type = "github"
-
-[[source]]
 type = "linear"
 token = "env:WEEKLOG_TEST_LINEAR"
 `
@@ -58,7 +55,7 @@ token = "env:WEEKLOG_TEST_LINEAR"
 	if stderr != "" {
 		t.Fatalf("stderr = %q", stderr)
 	}
-	for _, name := range []string{"codex", "github", "linear"} {
+	for _, name := range []string{"codex", "linear"} {
 		if !strings.Contains(stdout, name+": skipped (collector is not implemented)") {
 			t.Fatalf("stdout missing skipped %s\n%s", name, stdout)
 		}
@@ -66,7 +63,7 @@ token = "env:WEEKLOG_TEST_LINEAR"
 	if !strings.Contains(stdout, "window: 2026-W41 (2026-10-05T00:00:00Z .. 2026-10-12T00:00:00Z)") {
 		t.Fatalf("stdout = %s", stdout)
 	}
-	if !strings.Contains(stdout, "link: ok") || !strings.Contains(stdout, "0 events, 3 sources skipped") {
+	if !strings.Contains(stdout, "link: ok") || !strings.Contains(stdout, "0 events, 2 sources skipped") {
 		t.Fatalf("stdout = %s", stdout)
 	}
 	if strings.Contains(stdout+stderr, "weeklog-linear-token") {
@@ -84,7 +81,13 @@ func TestCollectPartialSources(t *testing.T) {
 		t.Fatal(err)
 	}
 	home := isolatePlugins(t)
-	t.Setenv("PATH", filepath.Join(home, "bin")+string(os.PathListSeparator)+filepath.Dir(gitBin))
+	bin := filepath.Join(home, "bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(gitBin, filepath.Join(bin, "git")); err != nil {
+		t.Fatal(err)
+	}
 	const (
 		secret = "weeklog-test-secret"
 		token  = "ghp_" + "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
@@ -105,10 +108,6 @@ func TestCollectPartialSources(t *testing.T) {
 	runGit(t, repo, "-c", "user.name=Alice", "-c", "user.email=alice@example.com",
 		"commit", "--date=2026-10-08T15:00:00Z", "-m", "Ship "+secret+" "+token)
 
-	bin := filepath.Join(home, "bin")
-	if err := os.MkdirAll(bin, 0o755); err != nil {
-		t.Fatal(err)
-	}
 	plug := `#!/bin/sh
 if [ "$1" = "describe" ]; then
   printf '%s\n' '{"protocol":1,"name":"plug","version":"0.1.0","config":{"token":{"type":"secret"}}}'
@@ -117,8 +116,8 @@ fi
 if [ "$1" != "collect" ]; then
   exit 0
 fi
-# Read stdin in the shell. The test PATH only contains the plugin dir and
-# git's directory, and on macOS that is Homebrew, which does not have cat.
+# Read stdin in the shell. The test PATH only contains the plugin dir, which
+# does not have cat.
 req=
 while IFS= read -r line || [ -n "$line" ]; do
   req="${req}${line}
@@ -200,12 +199,13 @@ token = "env:WEEKLOG_TEST_SECRET"
 		"source[0] git: ok (1 event)",
 		"source[1] claude-code: ok (0 events)",
 		"source[2] codex: skipped (collector is not implemented)",
-		"source[3] github: skipped (collector is not implemented)",
+		"source[3] github: failed",
+		"gh auth token is unavailable",
 		"source[4] linear: skipped (collector is not implemented)",
 		"source[5] plug: ok (1 event)",
 		"source[6] boom: failed",
 		"link: ok",
-		"2 events, 1 source failed, 3 sources skipped",
+		"2 events, 2 sources failed, 2 sources skipped",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("stdout missing %q\n%s\nstderr=%s", want, stdout, stderr)

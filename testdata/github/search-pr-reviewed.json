@@ -1,0 +1,158 @@
+{
+  "data": {
+    "search": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      },
+      "nodes": [
+        {
+          "__typename": "PullRequest",
+          "number": 20,
+          "title": "Reviewed change",
+          "body": "Please see GEN-404",
+          "url": "https://github.com/other/lib/pull/20",
+          "state": "OPEN",
+          "createdAt": "2026-10-01T00:00:00Z",
+          "updatedAt": "2026-10-10T15:04:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 8,
+          "deletions": 1,
+          "author": {
+            "login": "carol"
+          },
+          "repository": {
+            "nameWithOwner": "other/lib"
+          },
+          "headRefName": "fix/tests",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": [
+              {
+                "commit": {
+                  "oid": "4444444444444444444444444444444444444444"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": [
+              {
+                "databaseId": 42,
+                "id": "PRR_42",
+                "author": {
+                  "login": "alice"
+                },
+                "body": "Please add a test\n\nGEN-404",
+                "state": "CHANGES_REQUESTED",
+                "submittedAt": "2026-10-10T15:04:00Z",
+                "url": "https://github.com/other/lib/pull/20#pullrequestreview-42"
+              },
+              {
+                "databaseId": 43,
+                "id": "PRR_43",
+                "author": {
+                  "login": "dave"
+                },
+                "body": "I agree",
+                "state": "COMMENTED",
+                "submittedAt": "2026-10-10T16:00:00Z",
+                "url": "https://github.com/other/lib/pull/20#pullrequestreview-43"
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "number": 12,
+          "title": "duplicate",
+          "body": "",
+          "url": "https://github.com/acme/otto/pull/12",
+          "state": "MERGED",
+          "createdAt": "2026-10-06T15:00:00Z",
+          "updatedAt": "2026-10-08T18:00:00Z",
+          "closedAt": "2026-10-08T18:00:00Z",
+          "mergedAt": "2026-10-08T18:00:00Z",
+          "additions": 0,
+          "deletions": 0,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/otto"
+          },
+          "headRefName": "cursor/fix-webhooks",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "number": 21,
+          "title": "Old review",
+          "body": "",
+          "url": "https://github.com/other/lib/pull/21",
+          "state": "OPEN",
+          "createdAt": "2026-09-01T00:00:00Z",
+          "updatedAt": "2026-10-09T00:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 0,
+          "deletions": 0,
+          "author": {
+            "login": "dave"
+          },
+          "repository": {
+            "nameWithOwner": "other/lib"
+          },
+          "headRefName": "old",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": [
+              {
+                "databaseId": 21,
+                "id": "PRR_21",
+                "author": {
+                  "login": "alice"
+                },
+                "body": "Earlier review",
+                "state": "COMMENTED",
+                "submittedAt": "2026-09-01T12:00:00Z",
+                "url": "https://github.com/other/lib/pull/21#pullrequestreview-21"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

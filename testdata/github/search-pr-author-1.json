@@ -1,0 +1,289 @@
+{
+  "data": {
+    "search": {
+      "pageInfo": {
+        "hasNextPage": true,
+        "endCursor": "pr-author-2"
+      },
+      "nodes": [
+        {
+          "__typename": "PullRequest",
+          "number": 1,
+          "title": "Starts at the window",
+          "body": "",
+          "url": "https://github.com/acme/edge/pull/1",
+          "state": "OPEN",
+          "createdAt": "2026-10-05T00:00:00Z",
+          "updatedAt": "2026-10-05T00:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 0,
+          "deletions": 0,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/edge"
+          },
+          "headRefName": "main",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": [
+              {
+                "commit": {
+                  "oid": "1111111111111111111111111111111111111111"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "number": 6,
+          "title": "Close the stale branch",
+          "body": "",
+          "url": "https://github.com/acme/otto/pull/6",
+          "state": "CLOSED",
+          "createdAt": "2026-09-01T00:00:00Z",
+          "updatedAt": "2026-10-07T08:00:00Z",
+          "closedAt": "2026-10-07T08:00:00Z",
+          "mergedAt": null,
+          "additions": 3,
+          "deletions": 1,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/otto"
+          },
+          "headRefName": "wip/stale",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": [
+              {
+                "commit": {
+                  "oid": "2222222222222222222222222222222222222222"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "number": 12,
+          "title": "Fix Stripe webhook retries",
+          "body": "Closes GEN-301\n\nRetries the webhook.",
+          "url": "https://github.com/acme/otto/pull/12",
+          "state": "MERGED",
+          "createdAt": "2026-10-06T15:00:00Z",
+          "updatedAt": "2026-10-08T18:00:00Z",
+          "closedAt": "2026-10-08T18:00:00Z",
+          "mergedAt": "2026-10-08T18:00:00Z",
+          "additions": 40,
+          "deletions": 2,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/otto"
+          },
+          "headRefName": "cursor/fix-webhooks",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": true,
+              "endCursor": "commit-2"
+            },
+            "nodes": [
+              {
+                "commit": {
+                  "oid": "0123456789abcdef0123456789abcdef01234567"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": true,
+              "endCursor": "review-2"
+            },
+            "nodes": [
+              {
+                "databaseId": 9,
+                "id": "PRR_9",
+                "author": {
+                  "login": "bob"
+                },
+                "body": "LGTM",
+                "state": "APPROVED",
+                "submittedAt": "2026-10-08T16:00:00Z",
+                "url": "https://github.com/acme/otto/pull/12#pullrequestreview-9"
+              },
+              {
+                "databaseId": 10,
+                "id": "PRR_10",
+                "author": {
+                  "login": "alice"
+                },
+                "body": "Self note GEN-302",
+                "state": "COMMENTED",
+                "submittedAt": "2026-10-07T12:00:00Z",
+                "url": "https://github.com/acme/otto/pull/12#pullrequestreview-10"
+              },
+              {
+                "databaseId": 8,
+                "id": "PRR_8",
+                "author": {
+                  "login": "alice"
+                },
+                "body": "Earlier",
+                "state": "COMMENTED",
+                "submittedAt": "2026-09-01T12:00:00Z",
+                "url": "https://github.com/acme/otto/pull/12#pullrequestreview-8"
+              },
+              {
+                "databaseId": 7,
+                "id": "PRR_7",
+                "author": {
+                  "login": "alice"
+                },
+                "body": "not submitted",
+                "state": "PENDING",
+                "submittedAt": null,
+                "url": "https://github.com/acme/otto/pull/12#pullrequestreview-7"
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "number": 3,
+          "title": "Widget notes",
+          "body": "",
+          "url": "https://github.com/acme/widgets/pull/3",
+          "state": "OPEN",
+          "createdAt": "2026-09-01T00:00:00Z",
+          "updatedAt": "2026-10-08T09:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 0,
+          "deletions": 0,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/widgets"
+          },
+          "headRefName": "notes",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "number": 99,
+          "title": "At the exclusive end",
+          "body": "",
+          "url": "https://github.com/acme/late/pull/99",
+          "state": "MERGED",
+          "createdAt": "2026-10-12T00:00:00Z",
+          "updatedAt": "2026-10-12T00:00:00Z",
+          "closedAt": "2026-10-12T00:00:00Z",
+          "mergedAt": "2026-10-12T00:00:00Z",
+          "additions": 0,
+          "deletions": 0,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/late"
+          },
+          "headRefName": "late",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "PullRequest",
+          "number": 50,
+          "title": "Missing repo",
+          "body": "",
+          "url": "",
+          "state": "OPEN",
+          "createdAt": "2026-10-08T00:00:00Z",
+          "updatedAt": "2026-10-08T00:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 0,
+          "deletions": 0,
+          "author": {
+            "login": "alice"
+          },
+          "repository": null,
+          "headRefName": null,
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "Discussion",
+          "number": 1,
+          "title": "Not a pull request"
+        },
+        null
+      ]
+    }
+  }
+}
