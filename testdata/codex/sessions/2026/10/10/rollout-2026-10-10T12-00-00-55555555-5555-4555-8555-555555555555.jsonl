@@ -1,0 +1,5 @@
+{"timestamp":"2026-10-10T12:00:00Z","type":"session_meta","payload":{"id":"55555555-5555-4555-8555-555555555555","timestamp":"2026-10-10T11:59:00Z","cwd":"/tmp/scratch","git":{"branch":"main","repository_url":"https://user:s3cret-token@github.com/acme/edge.git"}}}
+{"timestamp":"2026-10-10T12:00:30Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"First block"},{"type":"input_text","text":"Second block"}]}}
+{"timestamp":"2026-10-10T12:02:00Z","type":"response_item","payload":{"type":"function_call","name":"apply_patch","call_id":"call_rel","arguments":{"input":"*** Begin Patch\n*** Add File: relative.txt\n+hi\n*** End Patch"}}}
+{"timestamp":"2026-10-10T12:03:00Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","call_id":"call_exec","arguments":"{\"cmd\":\"cat app/not-a-edited-file.go\"}"}}
+{"timestamp":"2026-10-10T12:05:00Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":1,"output_tokens":3,"total_tokens":4}}}}

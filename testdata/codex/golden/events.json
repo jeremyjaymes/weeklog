@@ -1,0 +1,66 @@
+[
+  {
+    "source": "codex",
+    "source_id": "11111111-1111-4111-8111-111111111111",
+    "kind": "agent_session",
+    "ts": "2026-10-08T14:02:11Z",
+    "ts_end": "2026-10-08T15:40:00Z",
+    "title": "Fix Stripe webhook retries",
+    "summary": "Fix Stripe webhook retries",
+    "repo": "github.com/jeremyjaymes/otto",
+    "branch": "cursor/fix-webhooks",
+    "cwd": "/Users/j/Projects/otto",
+    "files": [
+      "app/Webhooks.php",
+      "app/retry.go",
+      "docs/notes.md",
+      "/tmp/outside.txt"
+    ],
+    "metrics": {
+      "tokens_in": 1200,
+      "tokens_out": 800
+    },
+    "body_ref": "/sessions/2026/10/08/rollout-2026-10-08T14-02-11-11111111-1111-4111-8111-111111111111.jsonl"
+  },
+  {
+    "source": "codex",
+    "source_id": "44444444-4444-4444-8444-444444444444",
+    "kind": "agent_session",
+    "ts": "2026-10-09T08:59:00Z",
+    "ts_end": "2026-10-09T09:05:00Z",
+    "title": "Try Lob adapter spike",
+    "summary": "Try Lob adapter spike\n\nMore detail that stays in the summary.",
+    "repo": "github.com/jeremyjaymes/spike",
+    "branch": "spike",
+    "cwd": "/Users/j/Projects/spike",
+    "files": [
+      "adapter.go",
+      "notes.ipynb"
+    ],
+    "metrics": {
+      "tokens_in": 10,
+      "tokens_out": 4
+    },
+    "body_ref": "/sessions/2026/10/09/rollout-2026-10-09T09-00-00-44444444-4444-4444-8444-444444444444.jsonl"
+  },
+  {
+    "source": "codex",
+    "source_id": "55555555-5555-4555-8555-555555555555",
+    "kind": "agent_session",
+    "ts": "2026-10-10T11:59:00Z",
+    "ts_end": "2026-10-10T12:05:00Z",
+    "title": "First block",
+    "summary": "First block\nSecond block",
+    "repo": "github.com/acme/edge",
+    "branch": "main",
+    "cwd": "/tmp/scratch",
+    "files": [
+      "relative.txt"
+    ],
+    "metrics": {
+      "tokens_in": 1,
+      "tokens_out": 3
+    },
+    "body_ref": "/sessions/2026/10/10/rollout-2026-10-10T12-00-00-55555555-5555-4555-8555-555555555555.jsonl"
+  }
+]
