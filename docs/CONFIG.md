@@ -85,7 +85,7 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 |---|---|
 | `git` | `roots` (array of paths, required), `authors` (array of strings). Each root is scanned for repositories through three directory levels. `authors` matches author emails or names; when omitted, `identity.emails` is used. |
 | `claude-code` | none. Reads `$CLAUDE_CONFIG_DIR/projects` when that variable is set, and `~/.claude/projects` otherwise. |
-| `codex` | none |
+| `codex` | none. Reads `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl` when that variable is set, and `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` otherwise. |
 | `github` | `token` (secret, optional). When it is unset, collect runs `gh auth token`. |
 | `linear` | `token` (secret, required), `ticket_pattern` (regular expression). Collect reads issues assigned to or created by the API key's user that changed in the window, and their state history. Keys that match `ticket_pattern` are stored on `refs`. When the pattern is omitted, the built-in ticket shape is used. |
 

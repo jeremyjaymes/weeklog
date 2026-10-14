@@ -1,0 +1,5 @@
+{"timestamp":"2026-10-09T09:00:00Z","type":"session_meta","payload":{"meta":{"id":"44444444-4444-4444-8444-444444444444","timestamp":"2026-10-09T08:59:00Z","cwd":"/Users/j/Projects/spike"},"git":{"branch":"spike","repository_url":"https://github.com/jeremyjaymes/spike.git"}}}
+{"timestamp":"2026-10-09T09:00:30Z","type":"response_item","payload":{"type":"message","role":"developer","content":[{"type":"input_text","text":"SHOULD NOT BE THE TITLE"}]}}
+{"timestamp":"2026-10-09T09:01:00Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"Try Lob adapter spike\n\nMore detail that stays in the summary."}]}}
+{"timestamp":"2026-10-09T09:04:00Z","type":"event_msg","payload":{"type":"patch_apply_end","success":true,"changes":{"/Users/j/Projects/spike/notes.ipynb":{"type":"update","unified_diff":"@@"},"/Users/j/Projects/spike/adapter.go":{"type":"add","content":"package adapter"}}}}
+{"timestamp":"2026-10-09T09:05:00Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10,"cached_input_tokens":4,"output_tokens":4,"total_tokens":14}}}}

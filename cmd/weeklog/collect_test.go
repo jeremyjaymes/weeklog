@@ -26,8 +26,9 @@ func TestCollectHelp(t *testing.T) {
 	}
 }
 
-func TestCollectStubsAreSkipped(t *testing.T) {
+func TestCollectCodexWithoutSessions(t *testing.T) {
 	home := isolatePlugins(t)
+	t.Setenv("CODEX_HOME", "")
 	path := filepath.Join(home, "config.toml")
 	body := `
 [identity]
@@ -50,8 +51,11 @@ type = "codex"
 	if stderr != "" {
 		t.Fatalf("stderr = %q", stderr)
 	}
-	if !strings.Contains(stdout, "codex: skipped (collector is not implemented)") {
-		t.Fatalf("stdout missing skipped codex\n%s", stdout)
+	if !strings.Contains(stdout, "source[0] codex: ok (0 events)") {
+		t.Fatalf("stdout missing codex result\n%s", stdout)
+	}
+	if strings.Contains(stdout, "skipped") {
+		t.Fatalf("stdout skipped codex\n%s", stdout)
 	}
 	if strings.Contains(stdout, "linear:") {
 		t.Fatalf("stdout mentioned linear\n%s", stdout)
@@ -59,7 +63,7 @@ type = "codex"
 	if !strings.Contains(stdout, "window: 2026-W41 (2026-10-05T00:00:00Z .. 2026-10-12T00:00:00Z)") {
 		t.Fatalf("stdout = %s", stdout)
 	}
-	if !strings.Contains(stdout, "link: ok") || !strings.Contains(stdout, "0 events, 1 source skipped") {
+	if !strings.Contains(stdout, "link: ok") || !strings.Contains(stdout, "\n0 events\n") {
 		t.Fatalf("stdout = %s", stdout)
 	}
 	db := filepath.Join(home, "data", "weeklog", "weeklog.db")
@@ -74,6 +78,7 @@ func TestCollectPartialSources(t *testing.T) {
 		t.Fatal(err)
 	}
 	home := isolatePlugins(t)
+	t.Setenv("CODEX_HOME", "")
 	bin := filepath.Join(home, "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		t.Fatal(err)
@@ -187,17 +192,20 @@ token = "env:WEEKLOG_TEST_SECRET"
 	if !errors.Is(err, collect.ErrFailed) {
 		t.Fatalf("collect: %v\n%s\n%s", err, stdout, stderr)
 	}
+	if strings.Contains(stdout, "skipped") {
+		t.Fatalf("stdout skipped a source\n%s", stdout)
+	}
 	for _, want := range []string{
 		"source[0] git: ok (1 event)",
 		"source[1] claude-code: ok (0 events)",
-		"source[2] codex: skipped (collector is not implemented)",
+		"source[2] codex: ok (0 events)",
 		"source[3] github: failed",
 		"gh auth token is unavailable",
 		"source[4] linear: failed (linear: collect: token contains whitespace or control characters)",
 		"source[5] plug: ok (1 event)",
 		"source[6] boom: failed",
 		"link: ok",
-		"2 events, 3 sources failed, 1 source skipped",
+		"2 events, 3 sources failed",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("stdout missing %q\n%s\nstderr=%s", want, stdout, stderr)
