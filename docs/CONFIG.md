@@ -131,6 +131,29 @@ weeklog config check
 weeklog config check --config ~/.config/weeklog/config.toml
 ```
 
+## `weeklog init`
+
+`weeklog init` writes a starter config and enables the sources it finds on this machine.
+
+| Check | Enabled when |
+|---|---|
+| Claude Code | `$CLAUDE_CONFIG_DIR` is a directory. When that variable is unset, `~/.claude` is a directory. |
+| Codex | `$CODEX_HOME` is a directory. When that variable is unset, `~/.codex` is a directory. |
+| GitHub | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token. The file sets `token = "cmd:gh auth token"`. The token value is not written or printed. |
+| git | `~/Projects` contains at least one repository within three directory levels, the same depth the git source scans. `roots` is `["~/Projects"]`. |
+
+`identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`.
+
+Sources that are not found are omitted. `weeklog config check` accepts the file. A literal token is not written.
+
+An existing config is not overwritten. init prints the file it would write and leaves the current file in place. `--force` replaces it.
+
+```bash
+weeklog init
+weeklog init --config ./config.toml
+weeklog init --force
+```
+
 ## `weeklog collect`
 
 `weeklog collect` loads this same file, resolves secret references, and passes the resolved settings to each source. It refuses to collect when config check would report an error. Warnings, including a literal secret, are printed and collection continues.

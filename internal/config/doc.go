@@ -5,4 +5,7 @@
 // Secret fields use env:, cmd:, and file:
 // references. Resolved secret values are kept out of check reports and
 // formatted output.
+//
+// Init writes a starter file after detecting local sources. The file uses
+// secret references and does not contain secret values.
 package config

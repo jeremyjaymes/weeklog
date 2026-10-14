@@ -2,7 +2,7 @@
 
 An open-source CLI that pulls your week from pluggable sources (git, coding agents, pull requests, and tickets), links the activity into units of work, and writes a plain Markdown weekly log you own.
 
-**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, `weeklog link-run`, `weeklog link`, `weeklog unlink`, `weeklog explain`, and `weeklog week` are implemented.
+**Status: pre-alpha.** `weeklog version`, `weeklog init`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, `weeklog link-run`, `weeklog link`, `weeklog unlink`, `weeklog explain`, and `weeklog week` are implemented.
 
 ## Quickstart
 
@@ -27,7 +27,9 @@ go build -o weeklog ./cmd/weeklog
 
 `weeklog version` prints `weeklog version dev` for a development build.
 
-Create `~/.config/weeklog/config.toml`. macOS uses that path when `XDG_CONFIG_HOME` is unset. `--config` selects another file.
+`weeklog init` writes `~/.config/weeklog/config.toml`, or `$XDG_CONFIG_HOME/weeklog/config.toml` when that variable is set. macOS uses `~/.config` when `XDG_CONFIG_HOME` is unset. `--config` selects another file.
+
+init enables Claude Code when `$CLAUDE_CONFIG_DIR` is a directory, or `~/.claude` when that variable is unset. Codex uses `$CODEX_HOME` the same way, otherwise `~/.codex`. GitHub is enabled when the `gh` CLI is logged in, and git when `~/Projects` contains repositories. Sources that are missing are omitted. An existing file is left unchanged unless `--force` is set. A hand-written file has the same shape:
 
 ```toml
 [identity]
@@ -47,9 +49,10 @@ authors = ["you@example.com"]
 type = "claude-code"
 ```
 
-`git` scans the `roots` directories. `claude-code` reads `$CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when that variable is unset. `github` reads pull requests, reviews, and issues from the GitHub GraphQL API. Setup, the config block, token access, and errors are in [GitHub](#github). `linear` reads issues and state history from the Linear GraphQL API. Setup is in [Linear](#linear). `codex` is recognized and skipped until its collector lands.
+`git` scans the `roots` directories. `claude-code` reads `$CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when that variable is unset. `github` reads pull requests, reviews, and issues from the GitHub GraphQL API. Setup, the config block, token access, and errors are in [GitHub](#github). `linear` reads issues and state history from the Linear GraphQL API. Setup is in [Linear](#linear). `codex` reads `$CODEX_HOME` or `~/.codex`. init writes that source when the directory is present. Collect skips it until its collector lands.
 
 ```bash
+weeklog init
 weeklog config check
 weeklog collect
 weeklog week

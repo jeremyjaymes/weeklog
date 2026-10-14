@@ -19,6 +19,7 @@ const sourceName = "git"
 
 // maxScanDepth is how many directory levels below a root are scanned.
 // The root itself is level 0. A repository stops the walk.
+// weeklog init uses this same depth when it looks for repositories under ~/Projects.
 const maxScanDepth = 3
 
 // Source collects commit events from local git repositories.
