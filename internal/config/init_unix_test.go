@@ -13,7 +13,13 @@ import (
 
 func TestInitGitHubAndGitEmail(t *testing.T) {
 	const canary = "wksec_INIT_CANARY_9f3a"
-	systemGit := gitDir(t)
+	// Look these up before isolateInitHome replaces PATH. config check runs
+	// the token reference with `sh -c`. On macOS, git and sh are in different
+	// directories (/usr/bin and /bin, or Homebrew and /bin). A PATH that only
+	// contains git's directory cannot start sh, so the check reports
+	// "command failed" instead of running the fake gh.
+	gitBin := commandDir(t, "git")
+	shellBin := commandDir(t, "sh")
 	home := isolateInitHome(t)
 	bin := filepath.Join(home, "bin")
 	writeGH(t, bin, `#!/bin/sh
@@ -29,7 +35,10 @@ if [ "$1" = auth ] && [ "$2" = token ]; then
 fi
 exit 1
 `)
-	t.Setenv("PATH", bin+string(os.PathListSeparator)+systemGit)
+	// Resolve /var -> /private/var so the shell looks up gh through the same
+	// path the kernel uses for the temp directory.
+	bin = evalSymlinks(t, bin)
+	t.Setenv("PATH", joinPath(bin, gitBin, shellBin))
 	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(home, ".gitconfig"))
 	if err := os.WriteFile(filepath.Join(home, ".gitconfig"), []byte("[user]\n\temail = dev@example.com\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -68,8 +77,9 @@ exit 1
 	if !strings.Contains(result.Body, "github = \"octocat\"") || !strings.Contains(result.Body, "token = \"cmd:gh auth token\"") {
 		t.Fatalf("body = %s", result.Body)
 	}
-	if !strings.Contains(result.Body, "type = \"codex\"") {
-		t.Fatalf("body = %s", result.Body)
+	// The merged codex collector accepts no source keys besides type.
+	if !strings.Contains(result.Body, "[[source]]\ntype = \"codex\"\n\n[[source]]\ntype = \"github\"\n") {
+		t.Fatalf("codex block = %s", result.Body)
 	}
 
 	check, err := Check(context.Background(), path)
@@ -142,11 +152,33 @@ func writeGH(t *testing.T, dir, script string) {
 	}
 }
 
-func gitDir(t *testing.T) string {
+func commandDir(t *testing.T, name string) string {
 	t.Helper()
-	path, err := exec.LookPath("git")
+	path, err := exec.LookPath(name)
 	if err != nil {
-		t.Fatal("git is required")
+		t.Fatalf("%s is required", name)
 	}
-	return filepath.Dir(path)
+	return filepath.Dir(evalSymlinks(t, path))
+}
+
+func evalSymlinks(t *testing.T, path string) string {
+	t.Helper()
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resolved
+}
+
+func joinPath(dirs ...string) string {
+	seen := make(map[string]struct{}, len(dirs))
+	out := make([]string, 0, len(dirs))
+	for _, dir := range dirs {
+		if _, ok := seen[dir]; ok {
+			continue
+		}
+		seen[dir] = struct{}{}
+		out = append(out, dir)
+	}
+	return strings.Join(out, string(os.PathListSeparator))
 }
