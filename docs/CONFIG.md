@@ -74,8 +74,8 @@ token = "cmd:op read op://dev/basecamp/token"
 
 | Key | Required | Notes |
 |---|---|---|
-| `dir` | no | Directory for weekly Markdown. A leading `~` is expanded. Unset is a warning. |
-| `template` | no | Path to a template. Empty selects the built-in template. A leading `~` is expanded. |
+| `dir` | no | Directory for weekly Markdown. A leading `~` is expanded. Unset is a warning. `weeklog week` writes `<dir>/<week>.md` here when `--out` is omitted. |
+| `template` | no | Path to a Go `text/template`. Empty selects the built-in template. A leading `~` is expanded. A relative path is resolved from the config file's directory. |
 
 ### Sources
 

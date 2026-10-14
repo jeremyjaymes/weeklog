@@ -2,7 +2,55 @@
 
 An open-source CLI that pulls your week from pluggable sources (git, coding agents, pull requests, and tickets), links the activity into units of work, and writes a plain Markdown weekly log you own.
 
-**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, and `weeklog link-run` are implemented.
+**Status: pre-alpha.** `weeklog version`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, `weeklog link-run`, and `weeklog week` are implemented.
+
+## Quickstart
+
+Requires Go 1.23 or newer. From a checkout:
+
+```bash
+go install ./cmd/weeklog
+```
+
+Or build a binary in the current directory:
+
+```bash
+go build -o weeklog ./cmd/weeklog
+```
+
+`weeklog version` prints `weeklog version dev` for a development build.
+
+Create `~/.config/weeklog/config.toml`. macOS uses that path when `XDG_CONFIG_HOME` is unset. `--config` selects another file.
+
+```toml
+[identity]
+emails = ["you@example.com"]
+timezone = "America/Chicago"
+week_starts = "monday"
+
+[output]
+dir = "~/journal/weeklog"
+
+[[source]]
+type = "git"
+roots = ["~/Projects"]
+authors = ["you@example.com"]
+
+[[source]]
+type = "claude-code"
+```
+
+`git` scans the `roots` directories. `claude-code` reads `$CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when that variable is unset. `codex`, `github`, and `linear` are recognized and skipped until their collectors land.
+
+```bash
+weeklog config check
+weeklog collect
+weeklog week
+```
+
+`config check` reports whether each secret reference resolved and does not print the value. `collect` reads the previous full week in the configured timezone, stores the events, and runs the linker. `week` writes that week to `~/journal/weeklog/<year>-W<week>.md` when `output.dir` is set. The file is overwritten on the next run, and text between `<!-- weeklog:notes -->` markers is kept.
+
+Use `--week 2026-W41` on both commands for a specific ISO week. `weeklog week --out -` prints Markdown to standard output. `weeklog week --json` prints the same report as JSON.
 
 ## Build
 
@@ -65,6 +113,25 @@ Pass 1 is deterministic and stores a reason on every link. A commit joins a pull
 weeklog link-run
 weeklog link-run --week 2026-W41
 ```
+
+## Week
+
+`weeklog week` renders the previous full week. `--week`, `--since`, and `--until` select another window, using the same rules as `weeklog collect`.
+
+```bash
+weeklog week
+weeklog week --week 2026-W41
+weeklog week --json
+weeklog week --out ~/journal/weeklog/2026-W41.md
+```
+
+The report groups linked work into Shipped, In progress, Explored, and Abandoned / stale. Commits and sessions that are not linked yet are still listed. Reviews, comments, issues, and unknown events are counted under Other activity.
+
+Time is the sum of agent-session durations and is labeled as an estimate. An item with no session uses 15 minutes for each cluster of commits. The Markdown file starts with `week`, `generated_at`, and `weeklog_version` front matter.
+
+`--md` is the default. `--json` writes the same structure for other tools. `--out FILE` writes that file; `-` writes to standard output. Without `--out`, a configured `output.dir` receives `<week>.md` (or `.json`). Otherwise the report is printed.
+
+Rewriting a Markdown file keeps the manual notes between `<!-- weeklog:notes -->` markers. `output.template` replaces the built-in `text/template`. A relative template path is resolved from the config file's directory.
 
 ## Redaction
 
