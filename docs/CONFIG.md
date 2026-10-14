@@ -86,7 +86,7 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 | `git` | `roots` (array of paths, required), `authors` (array of strings). Each root is scanned for repositories through three directory levels. `authors` matches author emails or names; when omitted, `identity.emails` is used. |
 | `claude-code` | none. Reads `$CLAUDE_CONFIG_DIR/projects` when that variable is set, and `~/.claude/projects` otherwise. |
 | `codex` | none |
-| `github` | `token` (secret, optional) |
+| `github` | `token` (secret, optional). When it is unset, collect runs `gh auth token`. |
 | `linear` | `token` (secret, required), `ticket_pattern` (regular expression) |
 
 Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).

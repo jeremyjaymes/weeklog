@@ -1,0 +1,108 @@
+{
+  "data": {
+    "search": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      },
+      "nodes": [
+        {
+          "__typename": "Issue",
+          "number": 15,
+          "title": "Assigned bug",
+          "body": "",
+          "url": "https://github.com/other/lib/issues/15",
+          "state": "OPEN",
+          "createdAt": "2026-10-11T16:00:00Z",
+          "updatedAt": "2026-10-11T16:00:00Z",
+          "closedAt": null,
+          "author": {
+            "login": "dave"
+          },
+          "repository": {
+            "nameWithOwner": "other/lib"
+          },
+          "assignees": {
+            "nodes": [
+              {
+                "login": "alice"
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "Issue",
+          "number": 16,
+          "title": "Old assignment",
+          "body": "",
+          "url": "https://github.com/other/lib/issues/16",
+          "state": "OPEN",
+          "createdAt": "2026-09-01T00:00:00Z",
+          "updatedAt": "2026-09-02T00:00:00Z",
+          "closedAt": null,
+          "author": {
+            "login": "dave"
+          },
+          "repository": {
+            "nameWithOwner": "other/lib"
+          },
+          "assignees": {
+            "nodes": [
+              {
+                "login": "alice"
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "Issue",
+          "number": 17,
+          "title": "Someone else",
+          "body": "",
+          "url": "https://github.com/other/lib/issues/17",
+          "state": "OPEN",
+          "createdAt": "2026-10-11T12:00:00Z",
+          "updatedAt": "2026-10-11T12:00:00Z",
+          "closedAt": null,
+          "author": {
+            "login": "eve"
+          },
+          "repository": {
+            "nameWithOwner": "other/lib"
+          },
+          "assignees": {
+            "nodes": [
+              {
+                "login": "eve"
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "Issue",
+          "number": 7,
+          "title": "Document retries",
+          "body": "See GEN-301",
+          "url": "https://github.com/acme/otto/issues/7",
+          "state": "OPEN",
+          "createdAt": "2026-10-08T10:00:00Z",
+          "updatedAt": "2026-10-08T10:00:00Z",
+          "closedAt": null,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/otto"
+          },
+          "assignees": {
+            "nodes": [
+              {
+                "login": "alice"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

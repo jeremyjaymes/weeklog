@@ -1,0 +1,53 @@
+{
+  "data": {
+    "search": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      },
+      "nodes": [
+        {
+          "__typename": "PullRequest",
+          "number": 4,
+          "title": "Edge case",
+          "body": "",
+          "url": "https://github.com/acme/edge/pull/4",
+          "state": "OPEN",
+          "createdAt": "2026-10-09T08:00:00Z",
+          "updatedAt": "2026-10-09T08:00:00Z",
+          "closedAt": null,
+          "mergedAt": null,
+          "additions": 5,
+          "deletions": 0,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/edge"
+          },
+          "headRefName": "feature/edge",
+          "commits": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": [
+              {
+                "commit": {
+                  "oid": "3333333333333333333333333333333333333333"
+                }
+              }
+            ]
+          },
+          "reviews": {
+            "pageInfo": {
+              "hasNextPage": false,
+              "endCursor": null
+            },
+            "nodes": []
+          }
+        }
+      ]
+    }
+  }
+}

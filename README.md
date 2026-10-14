@@ -6,10 +6,17 @@ An open-source CLI that pulls your week from pluggable sources (git, coding agen
 
 ## Quickstart
 
-Requires Go 1.23 or newer. From a checkout:
+Requires Go 1.23 or newer. From a checkout of this repository, install the command from the main package at `./cmd/weeklog`:
 
 ```bash
 go install ./cmd/weeklog
+```
+
+`go install` writes the binary to `$(go env GOPATH)/bin`. Put that directory on `PATH` before running `weeklog`:
+
+```bash
+export PATH="$(go env GOPATH)/bin:$PATH"
+weeklog version
 ```
 
 Or build a binary in the current directory:
@@ -40,7 +47,7 @@ authors = ["you@example.com"]
 type = "claude-code"
 ```
 
-`git` scans the `roots` directories. `claude-code` reads `$CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when that variable is unset. `codex`, `github`, and `linear` are recognized and skipped until their collectors land.
+`git` scans the `roots` directories. `claude-code` reads `$CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when that variable is unset. `github` reads pull requests, reviews, and issues from the GitHub GraphQL API. It uses the `token` setting, and runs `gh auth token` when `token` is unset. `codex` and `linear` are recognized and skipped until their collectors land.
 
 ```bash
 weeklog config check
@@ -54,14 +61,15 @@ Use `--week 2026-W41` on both commands for a specific ISO week. `weeklog week --
 
 ## Build
 
-Requires Go 1.23 or newer.
+Requires Go 1.23 or newer. Install from a checkout with the main package path:
 
 ```bash
 go install ./cmd/weeklog
+export PATH="$(go env GOPATH)/bin:$PATH"
 weeklog version
 ```
 
-A development build prints `weeklog version dev`. Release builds inject the version at link time:
+`go install` writes the binary to `$(go env GOPATH)/bin`. A development build prints `weeklog version dev`. Release builds inject the version at link time:
 
 ```bash
 go build -ldflags "-X main.version=v0.1.0" -o weeklog ./cmd/weeklog

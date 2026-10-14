@@ -13,6 +13,7 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/source"
 	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/git"
+	"github.com/jeremyjaymes/weeklog/internal/sources/github"
 )
 
 func TestSourcesListsBuiltins(t *testing.T) {
@@ -164,7 +165,7 @@ func TestBuiltinsDescribeThroughProtocol(t *testing.T) {
 				t.Fatalf("manifest = %#v", manifest)
 			}
 			_, err = builtin.src.Collect(context.Background(), source.CollectRequest{}, nil)
-			if builtin.name == "git" || builtin.name == "claude-code" {
+			if builtin.name == "git" || builtin.name == "claude-code" || builtin.name == "github" {
 				if !errors.Is(err, source.ErrConfig) {
 					t.Fatalf("collect err = %v, want config error", err)
 				}
@@ -200,6 +201,8 @@ func builtinDescribedVersion(name string) string {
 		return git.Version
 	case "claude-code":
 		return claudecode.Version
+	case "github":
+		return github.Version
 	default:
 		return source.BuiltinVersion
 	}

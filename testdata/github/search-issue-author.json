@@ -1,0 +1,115 @@
+{
+  "data": {
+    "search": {
+      "pageInfo": {
+        "hasNextPage": false,
+        "endCursor": null
+      },
+      "nodes": [
+        {
+          "__typename": "Issue",
+          "number": 7,
+          "title": "Document retries",
+          "body": "See GEN-301",
+          "url": "https://github.com/acme/otto/issues/7",
+          "state": "OPEN",
+          "createdAt": "2026-10-08T10:00:00Z",
+          "updatedAt": "2026-10-08T10:00:00Z",
+          "closedAt": null,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/otto"
+          },
+          "assignees": {
+            "nodes": [
+              {
+                "login": "alice"
+              }
+            ]
+          }
+        },
+        {
+          "__typename": "Issue",
+          "number": 8,
+          "title": "Still open",
+          "body": "",
+          "url": "https://github.com/acme/otto/issues/8",
+          "state": "OPEN",
+          "createdAt": "2026-09-15T00:00:00Z",
+          "updatedAt": "2026-10-08T11:00:00Z",
+          "closedAt": null,
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/otto"
+          },
+          "assignees": {
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "Issue",
+          "number": 9,
+          "title": "Old bug",
+          "body": "",
+          "url": "https://github.com/acme/otto/issues/9",
+          "state": "CLOSED",
+          "createdAt": "2026-09-01T00:00:00Z",
+          "updatedAt": "2026-10-06T13:00:00Z",
+          "closedAt": "2026-10-06T13:00:00Z",
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/otto"
+          },
+          "assignees": {
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "Issue",
+          "number": 2,
+          "title": "Already finished",
+          "body": "",
+          "url": "https://github.com/acme/old/issues/2",
+          "state": "CLOSED",
+          "createdAt": "2026-09-01T00:00:00Z",
+          "updatedAt": "2026-09-02T00:00:00Z",
+          "closedAt": "2026-09-02T00:00:00Z",
+          "author": {
+            "login": "alice"
+          },
+          "repository": {
+            "nameWithOwner": "acme/old"
+          },
+          "assignees": {
+            "nodes": []
+          }
+        },
+        {
+          "__typename": "Issue",
+          "number": 50,
+          "title": "No repo",
+          "body": "",
+          "url": "",
+          "state": "OPEN",
+          "createdAt": "2026-10-08T00:00:00Z",
+          "updatedAt": "2026-10-08T00:00:00Z",
+          "closedAt": null,
+          "author": {
+            "login": "alice"
+          },
+          "repository": null,
+          "assignees": {
+            "nodes": []
+          }
+        },
+        null
+      ]
+    }
+  }
+}

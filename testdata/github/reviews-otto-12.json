@@ -1,0 +1,27 @@
+{
+  "data": {
+    "repository": {
+      "pullRequest": {
+        "reviews": {
+          "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": null
+          },
+          "nodes": [
+            {
+              "databaseId": 15,
+              "id": "PRR_15",
+              "author": {
+                "login": "alice"
+              },
+              "body": "",
+              "state": "APPROVED",
+              "submittedAt": "2026-10-08T12:00:00Z",
+              "url": "https://github.com/acme/otto/pull/12#pullrequestreview-15"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
