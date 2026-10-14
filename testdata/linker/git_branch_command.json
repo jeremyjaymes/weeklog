@@ -1,0 +1,91 @@
+{
+  "name": "git checkout joins a branch",
+  "note": "Two sessions overlap, so the only-session rule does not apply and there is no file overlap. The first session's text records git checkout feature/pay, which joins the pull request on that branch. The second session stays explored. The open pull request marks the branch in progress.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "claude-code",
+      "source_id": "sess-pay",
+      "kind": "agent_session",
+      "ts": "2026-10-08T14:00:00Z",
+      "ts_end": "2026-10-08T15:00:00Z",
+      "title": "Pay flow",
+      "summary": "Run git checkout feature/pay before editing",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 2,
+      "source": "claude-code",
+      "source_id": "sess-look",
+      "kind": "agent_session",
+      "ts": "2026-10-08T14:30:00Z",
+      "ts_end": "2026-10-08T15:00:00Z",
+      "title": "Look around",
+      "summary": "Look around",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 3,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T15:30:00Z",
+      "title": "Handle pay",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 4,
+      "source": "github",
+      "source_id": "acme/otto#4",
+      "kind": "pr",
+      "ts": "2026-10-08T16:00:00Z",
+      "title": "Handle pay",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "state": "open"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Handle pay",
+      "status": "in progress",
+      "because": "The pull request is open.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-pay",
+          "reason": "git branch:feature/pay",
+          "because": "The session text runs git checkout feature/pay, which is the pull request's head branch."
+        },
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "branch:feature/pay",
+          "because": "The commit is on the pull request's head branch. The session joins that group through the pull request."
+        },
+        {
+          "source": "github",
+          "source_id": "acme/otto#4",
+          "reason": "branch:feature/pay, git branch:feature/pay",
+          "because": "Pass 1 joins the commit by branch. Pass 2 adds the session because of the git checkout."
+        }
+      ]
+    },
+    {
+      "title": "Look around",
+      "status": "explored",
+      "because": "This session has no commits and did not name a branch.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-look",
+          "reason": "session only",
+          "because": "It overlaps the other session, shares no files, and its text has no git checkout or switch."
+        }
+      ]
+    }
+  ]
+}

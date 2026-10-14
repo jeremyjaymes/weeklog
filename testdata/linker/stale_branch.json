@@ -1,0 +1,32 @@
+{
+  "name": "a stale branch",
+  "note": "The only commit is on a side branch, there is no pull request, and the last activity is more than seven days before as_of. The commit is a leftover and the item is abandoned.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-04T00:00:00Z",
+      "title": "Old experiment",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "experiment"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Old experiment",
+      "status": "abandoned",
+      "because": "A side branch with no pull request and no activity for seven days is abandoned.",
+      "events": [
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "leftover:github.com/jeremyjaymes/otto 2026-10-04",
+          "because": "The commit has nothing to link to, so it is grouped by repository and day. October 4 is eight days before October 12."
+        }
+      ]
+    }
+  ]
+}

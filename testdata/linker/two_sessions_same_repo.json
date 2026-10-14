@@ -1,0 +1,93 @@
+{
+  "name": "two sessions in the same repo",
+  "note": "Both sessions overlap both commits in time, in the same repository. Each commit shares a file with only one session, so the sessions stay apart. Both items are in progress because the commits are on a feature branch and there is no pull request.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "claude-code",
+      "source_id": "sess-a",
+      "kind": "agent_session",
+      "ts": "2026-10-08T10:00:00Z",
+      "ts_end": "2026-10-08T12:00:00Z",
+      "title": "Look at webhooks",
+      "cwd": "/Users/j/Projects/otto",
+      "files": ["app/Webhooks.php"]
+    },
+    {
+      "id": 2,
+      "source": "claude-code",
+      "source_id": "sess-b",
+      "kind": "agent_session",
+      "ts": "2026-10-08T11:00:00Z",
+      "ts_end": "2026-10-08T13:00:00Z",
+      "title": "Look at billing",
+      "cwd": "/Users/j/Projects/otto",
+      "files": ["app/Billing.php"]
+    },
+    {
+      "id": 3,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T12:30:00Z",
+      "title": "Update webhooks",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "cwd": "/Users/j/Projects/otto",
+      "files": ["app/Webhooks.php"]
+    },
+    {
+      "id": 4,
+      "source": "git",
+      "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+      "kind": "commit",
+      "ts": "2026-10-08T13:30:00Z",
+      "title": "Update billing",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "cwd": "/Users/j/Projects/otto",
+      "files": ["app/Billing.php"]
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Update webhooks",
+      "status": "in progress",
+      "because": "The webhooks session and commit share one file. The feature branch has no pull request, so the item is in progress.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-a",
+          "reason": "files overlap: 1",
+          "because": "app/Webhooks.php is in the session and in the commit, and the commit falls inside the session window."
+        },
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "files overlap: 1",
+          "because": "The other session does not touch app/Webhooks.php, so this commit stays with the webhooks session."
+        }
+      ]
+    },
+    {
+      "title": "Update billing",
+      "status": "in progress",
+      "because": "The billing session and commit share one file and stay separate from the webhooks work.",
+      "events": [
+        {
+          "source": "claude-code",
+          "source_id": "sess-b",
+          "reason": "files overlap: 1",
+          "because": "app/Billing.php is in the session and in the commit, and the commit falls inside the session window."
+        },
+        {
+          "source": "git",
+          "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+          "reason": "files overlap: 1",
+          "because": "The webhooks session does not touch app/Billing.php."
+        }
+      ]
+    }
+  ]
+}

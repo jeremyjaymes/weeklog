@@ -1,0 +1,49 @@
+{
+  "name": "a closed unmerged pull request",
+  "note": "The commit and pull request share a side branch. The pull request is closed and not merged, so the item is explored rather than in progress.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T10:00:00Z",
+      "title": "Spike",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "experiment"
+    },
+    {
+      "id": 2,
+      "source": "github",
+      "source_id": "acme/otto#9",
+      "kind": "pr",
+      "ts": "2026-10-08T12:00:00Z",
+      "title": "Try the spike",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "experiment",
+      "state": "closed"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Try the spike",
+      "status": "explored",
+      "because": "A closed pull request that did not merge is explored, ahead of the side-branch in-progress rule.",
+      "events": [
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "branch:experiment",
+          "because": "The commit is on the pull request's head branch in the same repository."
+        },
+        {
+          "source": "github",
+          "source_id": "acme/otto#9",
+          "reason": "branch:experiment",
+          "because": "The pull request head branch is experiment."
+        }
+      ]
+    }
+  ]
+}

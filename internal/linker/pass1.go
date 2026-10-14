@@ -24,6 +24,7 @@ type linkedEvent struct {
 
 type linkedItem struct {
 	Title  string
+	Status string
 	Events []linkedEvent
 }
 
@@ -49,6 +50,10 @@ func pass1(events []store.Record, patterns []*regexp.Regexp, deny bool) []linked
 	if len(events) == 0 {
 		return nil
 	}
+	return newHardLinker(events, patterns, deny).items()
+}
+
+func newHardLinker(events []store.Record, patterns []*regexp.Regexp, deny bool) *hardLinker {
 	l := &hardLinker{
 		events:  events,
 		uf:      newUF(len(events)),
@@ -61,7 +66,7 @@ func pass1(events []store.Record, patterns []*regexp.Regexp, deny bool) []linked
 	l.linkSHAs()
 	l.linkBranches()
 	l.linkLineage()
-	return l.items()
+	return l
 }
 
 type hardLinker struct {
@@ -437,8 +442,18 @@ func reasonRank(reason string) int {
 		return 2
 	case strings.HasPrefix(reason, "lineage:"):
 		return 3
-	default:
+	case strings.HasPrefix(reason, "files overlap:"):
 		return 4
+	case strings.HasPrefix(reason, "git branch:"), strings.HasPrefix(reason, "head branch:"):
+		return 5
+	case strings.HasPrefix(reason, "only session"):
+		return 6
+	case strings.HasPrefix(reason, "revert:"):
+		return 7
+	case strings.HasPrefix(reason, "leftover:"), reason == "session only":
+		return 8
+	default:
+		return 9
 	}
 }
 

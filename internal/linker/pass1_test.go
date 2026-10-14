@@ -653,6 +653,11 @@ func describeItems(items []linkedItem) string {
 	var b strings.Builder
 	for i, item := range items {
 		b.WriteString(item.Title)
+		if item.Status != "" {
+			b.WriteString(" [")
+			b.WriteString(item.Status)
+			b.WriteByte(']')
+		}
 		b.WriteByte('\n')
 		for _, ev := range item.Events {
 			b.WriteString("  ")

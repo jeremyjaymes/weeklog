@@ -569,11 +569,20 @@ ticket_pattern = "GEN-\\d+"
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 1 || items[0].Title != "Webhook retries" || len(items[0].Events) != 2 {
+	if len(items) != 3 || items[0].Title != "Webhook retries" || len(items[0].Events) != 2 {
 		t.Fatalf("items = %+v", items)
 	}
 	if items[0].Events[0].SourceID != "GEN-301" || items[0].Events[1].Reason != "ref:GEN-301 in commit message" {
 		t.Fatalf("members = %+v", items[0].Events)
+	}
+	if items[1].Title != "Other" || len(items[1].Events) != 1 || items[1].Events[0].SourceID != "ABC-99" {
+		t.Fatalf("ticket leftover = %+v", items[1])
+	}
+	if items[2].Title != "other" || len(items[2].Events) != 1 || items[2].Events[0].SourceID != "fedcba9876543210fedcba9876543210fedcba98" {
+		t.Fatalf("commit leftover = %+v", items[2])
+	}
+	if items[2].Events[0].Reason != "leftover:- 2026-10-08" {
+		t.Fatalf("commit reason = %+v", items[2].Events[0])
 	}
 }
 

@@ -1,0 +1,144 @@
+{
+  "name": "session to commits to pull request to ticket",
+  "note": "Pass 1 joins the session, both feature commits, the pull request, and the ticket. The session already has the head branch, so shared files do not add a soft reason. The merged pull request marks the item shipped. The main-branch commit shares no hard link and becomes a leftover, shipped because it is on the default branch.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "linear",
+      "source_id": "GEN-301",
+      "kind": "ticket",
+      "ts": "2026-10-06T12:00:00Z",
+      "title": "Fix Stripe webhook retries"
+    },
+    {
+      "id": 2,
+      "source": "git",
+      "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+      "kind": "commit",
+      "ts": "2026-10-08T10:00:00Z",
+      "title": "GEN-301 adjust tests",
+      "summary": "GEN-301 adjust tests",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "cursor/fix-webhooks",
+      "cwd": "/Users/j/Projects/otto"
+    },
+    {
+      "id": 3,
+      "source": "claude-code",
+      "source_id": "sess-1",
+      "kind": "agent_session",
+      "ts": "2026-10-08T14:00:00Z",
+      "title": "look at webhooks",
+      "summary": "look at webhooks",
+      "branch": "cursor/fix-webhooks",
+      "cwd": "/Users/j/Projects/otto",
+      "files": ["app/Webhooks.php"]
+    },
+    {
+      "id": 4,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T15:00:00Z",
+      "title": "Fix retries",
+      "summary": "Fix retries",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "cursor/fix-webhooks",
+      "cwd": "/Users/j/Projects/otto",
+      "files": ["app/Webhooks.php"]
+    },
+    {
+      "id": 5,
+      "source": "github",
+      "source_id": "acme/otto#12",
+      "kind": "pr",
+      "ts": "2026-10-08T16:00:00Z",
+      "title": "Fix Stripe webhook retries",
+      "summary": "Closes GEN-301",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "refs/heads/cursor/fix-webhooks",
+      "state": "merged",
+      "refs": ["0123456789abcdef0123456789abcdef01234567", "GEN-301"]
+    },
+    {
+      "id": 6,
+      "source": "github",
+      "source_id": "acme/otto#12#review-9",
+      "kind": "pr_review",
+      "ts": "2026-10-08T17:00:00Z",
+      "title": "LGTM",
+      "repo": "github.com/jeremyjaymes/otto"
+    },
+    {
+      "id": 7,
+      "source": "git",
+      "source_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "kind": "commit",
+      "ts": "2026-10-08T18:00:00Z",
+      "title": "unrelated",
+      "summary": "unrelated",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "main",
+      "cwd": "/Users/j/Projects/otto"
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Fix Stripe webhook retries",
+      "status": "shipped",
+      "because": "The pull request is merged, so the item is shipped even though the commits are on a feature branch.",
+      "events": [
+        {
+          "source": "linear",
+          "source_id": "GEN-301",
+          "reason": "ref:GEN-301 ticket",
+          "because": "The ticket's own key is GEN-301."
+        },
+        {
+          "source": "git",
+          "source_id": "fedcba9876543210fedcba9876543210fedcba98",
+          "reason": "ref:GEN-301 in commit message, branch:cursor/fix-webhooks",
+          "because": "The commit message names GEN-301, and the commit is on the pull request's head branch."
+        },
+        {
+          "source": "claude-code",
+          "source_id": "sess-1",
+          "reason": "branch:cursor/fix-webhooks",
+          "because": "The session recorded the pull request's head branch. Shared files do not add a soft reason because the session is already hard-linked."
+        },
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "sha:0123456789abcdef0123456789abcdef01234567 in pr, branch:cursor/fix-webhooks",
+          "because": "The pull request lists this commit SHA, and the commit is on the pull request's head branch."
+        },
+        {
+          "source": "github",
+          "source_id": "acme/otto#12",
+          "reason": "ref:GEN-301 in body, sha:0123456789abcdef0123456789abcdef01234567 in pr, branch:cursor/fix-webhooks, lineage:acme/otto#12",
+          "because": "The body names GEN-301, the commit list contains the SHA, the head branch matches, and the review's source id extends this pull request."
+        },
+        {
+          "source": "github",
+          "source_id": "acme/otto#12#review-9",
+          "reason": "lineage:acme/otto#12",
+          "because": "The review source id is the pull request id plus a lineage separator."
+        }
+      ]
+    },
+    {
+      "title": "unrelated",
+      "status": "shipped",
+      "because": "Nothing hard-linked or soft-linked this commit. It is a leftover, and it is shipped because it landed on main.",
+      "events": [
+        {
+          "source": "git",
+          "source_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "reason": "leftover:github.com/jeremyjaymes/otto 2026-10-08",
+          "because": "The commit is still unlinked, so it is grouped by its repository and UTC day."
+        }
+      ]
+    }
+  ]
+}

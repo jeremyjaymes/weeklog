@@ -1,0 +1,89 @@
+{
+  "name": "soft file overlap joins a session to a hard-linked commit",
+  "note": "The session has no branch, so pass 1 leaves it out. Its working directory is the otto checkout, and two files also appear on the commit inside the session window. That soft link pulls the session into the commit's hard-linked pull request and ticket. The merged pull request marks the item shipped.",
+  "as_of": "2026-10-12T00:00:00Z",
+  "events": [
+    {
+      "id": 1,
+      "source": "linear",
+      "source_id": "GEN-301",
+      "kind": "ticket",
+      "ts": "2026-10-06T12:00:00Z",
+      "title": "Fix Stripe webhook retries",
+      "state": "done"
+    },
+    {
+      "id": 2,
+      "source": "claude-code",
+      "source_id": "sess-1",
+      "kind": "agent_session",
+      "ts": "2026-10-08T14:00:00Z",
+      "ts_end": "2026-10-08T15:40:00Z",
+      "title": "look at webhooks",
+      "cwd": "/Users/j/Projects/otto",
+      "files": [
+        "/Users/j/Projects/otto/app/Webhooks.php",
+        "/Users/j/Projects/otto/app/Retry.php",
+        "/Users/j/Projects/otto/README.md"
+      ]
+    },
+    {
+      "id": 3,
+      "source": "git",
+      "source_id": "0123456789abcdef0123456789abcdef01234567",
+      "kind": "commit",
+      "ts": "2026-10-08T15:10:00Z",
+      "title": "Fix retries",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "cwd": "/Users/j/Projects/otto",
+      "files": ["app/Webhooks.php", "app/Retry.php"]
+    },
+    {
+      "id": 4,
+      "source": "github",
+      "source_id": "acme/otto#12",
+      "kind": "pr",
+      "ts": "2026-10-08T16:00:00Z",
+      "title": "Fix Stripe webhook retries",
+      "summary": "Closes GEN-301",
+      "repo": "github.com/jeremyjaymes/otto",
+      "branch": "feature/pay",
+      "state": "merged",
+      "refs": ["0123456789abcdef0123456789abcdef01234567"]
+    }
+  ],
+  "work_items": [
+    {
+      "title": "Fix Stripe webhook retries",
+      "status": "shipped",
+      "because": "The session joins the commit by file overlap, and that commit is already hard-linked to the merged pull request and the done ticket.",
+      "events": [
+        {
+          "source": "linear",
+          "source_id": "GEN-301",
+          "reason": "ref:GEN-301 ticket",
+          "because": "The ticket's own key is GEN-301, and the pull request body names it."
+        },
+        {
+          "source": "claude-code",
+          "source_id": "sess-1",
+          "reason": "files overlap: 2",
+          "because": "The session cwd resolves to otto. app/Webhooks.php and app/Retry.php also changed in the commit, which was authored before the session end plus two hours."
+        },
+        {
+          "source": "git",
+          "source_id": "0123456789abcdef0123456789abcdef01234567",
+          "reason": "sha:0123456789abcdef0123456789abcdef01234567 in pr, branch:feature/pay, files overlap: 2",
+          "because": "The pull request lists the SHA and shares the branch. The same two files attach the otherwise unlinked session."
+        },
+        {
+          "source": "github",
+          "source_id": "acme/otto#12",
+          "reason": "ref:GEN-301 in body, sha:0123456789abcdef0123456789abcdef01234567 in pr, branch:feature/pay",
+          "because": "Hard links join the pull request to the ticket and the commit. The session comes along because it joined that commit."
+        }
+      ]
+    }
+  ]
+}
