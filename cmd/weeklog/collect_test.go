@@ -28,7 +28,6 @@ func TestCollectHelp(t *testing.T) {
 
 func TestCollectStubsAreSkipped(t *testing.T) {
 	home := isolatePlugins(t)
-	t.Setenv("WEEKLOG_TEST_LINEAR", "weeklog-linear-token")
 	path := filepath.Join(home, "config.toml")
 	body := `
 [identity]
@@ -40,10 +39,6 @@ dir = "/tmp/weeklog-out"
 
 [[source]]
 type = "codex"
-
-[[source]]
-type = "linear"
-token = "env:WEEKLOG_TEST_LINEAR"
 `
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
@@ -55,19 +50,17 @@ token = "env:WEEKLOG_TEST_LINEAR"
 	if stderr != "" {
 		t.Fatalf("stderr = %q", stderr)
 	}
-	for _, name := range []string{"codex", "linear"} {
-		if !strings.Contains(stdout, name+": skipped (collector is not implemented)") {
-			t.Fatalf("stdout missing skipped %s\n%s", name, stdout)
-		}
+	if !strings.Contains(stdout, "codex: skipped (collector is not implemented)") {
+		t.Fatalf("stdout missing skipped codex\n%s", stdout)
+	}
+	if strings.Contains(stdout, "linear:") {
+		t.Fatalf("stdout mentioned linear\n%s", stdout)
 	}
 	if !strings.Contains(stdout, "window: 2026-W41 (2026-10-05T00:00:00Z .. 2026-10-12T00:00:00Z)") {
 		t.Fatalf("stdout = %s", stdout)
 	}
-	if !strings.Contains(stdout, "link: ok") || !strings.Contains(stdout, "0 events, 2 sources skipped") {
+	if !strings.Contains(stdout, "link: ok") || !strings.Contains(stdout, "0 events, 1 source skipped") {
 		t.Fatalf("stdout = %s", stdout)
-	}
-	if strings.Contains(stdout+stderr, "weeklog-linear-token") {
-		t.Fatal("collect printed the linear token")
 	}
 	db := filepath.Join(home, "data", "weeklog", "weeklog.db")
 	if _, err := os.Stat(db); err != nil {
@@ -91,10 +84,9 @@ func TestCollectPartialSources(t *testing.T) {
 	const (
 		secret = "weeklog-test-secret"
 		token  = "ghp_" + "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"
-		linear = "weeklog-linear-token"
+		linear = "weeklog linear token"
 	)
 	t.Setenv("WEEKLOG_TEST_SECRET", secret)
-	t.Setenv("WEEKLOG_TEST_LINEAR", linear)
 
 	repo := filepath.Join(home, "repo")
 	if err := os.MkdirAll(repo, 0o755); err != nil {
@@ -176,7 +168,7 @@ type = "github"
 
 [[source]]
 type = "linear"
-token = "env:WEEKLOG_TEST_LINEAR"
+token = "weeklog linear token"
 
 [[source]]
 type = "plug"
@@ -201,11 +193,11 @@ token = "env:WEEKLOG_TEST_SECRET"
 		"source[2] codex: skipped (collector is not implemented)",
 		"source[3] github: failed",
 		"gh auth token is unavailable",
-		"source[4] linear: skipped (collector is not implemented)",
+		"source[4] linear: failed (linear: collect: token contains whitespace or control characters)",
 		"source[5] plug: ok (1 event)",
 		"source[6] boom: failed",
 		"link: ok",
-		"2 events, 2 sources failed, 2 sources skipped",
+		"2 events, 3 sources failed, 1 source skipped",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("stdout missing %q\n%s\nstderr=%s", want, stdout, stderr)
