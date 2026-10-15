@@ -2,6 +2,8 @@ module github.com/jeremyjaymes/weeklog
 
 go 1.23.0
 
+toolchain go1.27.2
+
 require (
 	github.com/BurntSushi/toml v1.5.0
 	github.com/spf13/cobra v1.10.2
