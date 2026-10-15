@@ -54,7 +54,8 @@ type SourceStatus struct {
 
 // InitResult is the starter config init built.
 // Body is the TOML that was written, or that would be written when a file
-// already exists. It contains secret references, never secret values.
+// already exists. It contains secret references and empty token placeholders,
+// never secret values.
 type InitResult struct {
 	Path    string
 	Wrote   bool
@@ -71,6 +72,8 @@ type InitResult struct {
 // that variable is unset and ~/.claude is a directory. Codex uses
 // $CODEX_HOME the same way, otherwise ~/.codex. GitHub is enabled when gh
 // is on PATH, gh auth status succeeds, and gh auth token prints a token.
+// The written file is mode 0600. GitHub's token is cmd:gh auth token.
+// A commented Linear block uses token = "" and tells the user to paste a key.
 // Git is enabled when ~/Projects contains a repository within gitScanDepth.
 func Init(ctx context.Context, opts InitOptions) (InitResult, error) {
 	if ctx == nil {
@@ -250,7 +253,17 @@ func renderStarter(s starter) (string, error) {
 			return "", err
 		}
 	}
+	writeLinearPlaceholder(&b)
 	return b.String(), nil
+}
+
+// writeLinearPlaceholder appends a commented Linear source. The empty token
+// is the placeholder a user replaces. GitHub keeps cmd:gh auth token instead.
+func writeLinearPlaceholder(b *strings.Builder) {
+	b.WriteString("\n# Linear is not detected. Paste your key into token.\n")
+	b.WriteString("# [[source]]\n")
+	b.WriteString("# type = \"linear\"\n")
+	b.WriteString("# token = \"\"\n")
 }
 
 func writeString(b *strings.Builder, key, value string) error {
@@ -680,6 +693,8 @@ func writeConfigFile(path, body string) error {
 	if err := f.Close(); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}
+	// 0600 regardless of umask. A literal token in this file must not be
+	// group- or world-readable.
 	if err := os.Chmod(tmp, 0o600); err != nil {
 		return fmt.Errorf("write config: %w", err)
 	}

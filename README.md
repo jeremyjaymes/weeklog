@@ -33,7 +33,7 @@ An existing file is left unchanged unless `--force` is set. init enables a sourc
 | codex | `$CODEX_HOME` is a directory, or `~/.codex` when that variable is unset |
 | github | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token |
 
-Linear is not detected. Add that block by hand. See [Linear](#linear). A hand-written file has the same shape:
+The file is mode 0600. GitHub uses `token = "cmd:gh auth token"`. Linear is not detected. The file includes a commented block: paste your key into `token`. See [Linear](#linear). A hand-written file has the same shape:
 
 ```toml
 [identity]
@@ -67,7 +67,7 @@ weeklog config check
 weeklog config check --config ./config.toml
 ```
 
-`config check` resolves `env:`, `cmd:`, and `file:` secret references and reports whether each one resolved. It does not print secret values. See [docs/CONFIG.md](docs/CONFIG.md).
+`config check` accepts a literal secret and resolves optional `env:`, `cmd:`, and `file:` references. It reports whether each one resolved and does not print secret values. On Unix it warns when `config.toml` is group- or world-readable. See [docs/CONFIG.md](docs/CONFIG.md).
 
 ## Sources
 
@@ -223,13 +223,11 @@ These are warnings. Collect still succeeds:
 
 Install the `gh` CLI, run `gh auth login`, and omit `token`. Collect looks up `gh` on `PATH` and runs `gh auth token`. It keeps the first line of standard output, trimmed, and discards standard error. The child process gets `GH_PROMPT_DISABLED=1` and `GH_NO_UPDATE_NOTIFIER=1`, so a missing login fails instead of prompting.
 
-Or set `token` to a secret reference. The github source reads a token from the environment when `token` is an `env:` reference:
+Or set `token`. A literal token is supported and is not a warning. `env:`, `cmd:`, and `file:` references are optional; see [docs/CONFIG.md](docs/CONFIG.md). `weeklog init` writes `token = "cmd:gh auth token"` when `gh` is authenticated. That command is resolved during config check, before collect starts. A non-empty `token` is the bearer token. The `gh auth token` fallback runs when `token` is omitted.
 
 ```toml
-token = "env:GITHUB_TOKEN"
+token = "cmd:gh auth token"
 ```
-
-The name after `env:` is the variable. `cmd:` and `file:` references work the same way as other secrets; see [docs/CONFIG.md](docs/CONFIG.md). `token = "cmd:gh auth token"` is resolved during config check, before collect starts. A non-empty `token` is the bearer token. The `gh auth token` fallback runs when `token` is omitted.
 
 ### Config
 
@@ -239,7 +237,7 @@ github = "yourlogin"
 
 [[source]]
 type = "github"
-token = "env:GITHUB_TOKEN"
+token = "cmd:gh auth token"
 ```
 
 `identity.github` is the login. Omit it and collect uses the authenticated viewer's login. The login is 1–39 characters: ASCII letters, digits, and single hyphens, and it cannot start or end with a hyphen.
@@ -264,12 +262,14 @@ weeklog config check
 weeklog collect --source github
 ```
 
-With `token = "env:GITHUB_TOKEN"` set in the environment, `config check` includes a block like this and does not print the value:
+With `token = "cmd:gh auth token"`, `config check` includes a block like this and does not print the value:
 
 ```text
 source[0] github
-  token: resolved (env:GITHUB_TOKEN)
+  token: resolved (cmd:gh auth token)
 ```
+
+A literal token is reported as `token: literal`. The value is not printed.
 
 The index is the source's position in the file. When `token` is omitted, that secret line is absent and `gh auth token` runs during collect.
 
@@ -293,7 +293,6 @@ The count is the pull requests, reviews, and issues kept for the window. `--week
 | `error: source[N].token: command exited 1` | `token = "cmd:gh auth token"` and the command fails. Empty output says `command produced empty output`. A command that runs longer than 30 seconds says `command timed out`. |
 | `error: source[N].org: unknown field for github` | Any source key other than `token`, including `org`, `repos`, and `user`. |
 | `error: identity.github: must not contain whitespace` | The login contains whitespace or a control character. |
-| `warning: source[N].token: literal secret; use an env:, cmd:, or file: reference` | The token is written inline. This is a warning. Collect still runs. |
 
 `weeklog collect --source github` exits before collection with `source github is not configured` when that block is missing.
 
@@ -323,24 +322,19 @@ A malformed search node is a warning, and the source can still succeed. One malf
 
 ### Prerequisites
 
-Create a personal API key under Settings → Account → Security & access. Read access is enough. The linear source reads that key from the environment when `token` is an `env:` reference:
-
-```toml
-token = "env:LINEAR_API_KEY"
-```
-
-The name after `env:` is the variable. `cmd:` and `file:` references work the same way as other secrets; see [docs/CONFIG.md](docs/CONFIG.md). `token` is required. A literal token is allowed and reported as a warning.
+Create a personal API key under Settings → Account → Security & access. Read access is enough. Paste your key into `token`.
 
 ### Config
 
 ```toml
 [[source]]
 type = "linear"
-token = "env:LINEAR_API_KEY"
+# Paste your key.
+token = ""
 ticket_pattern = "GEN-\\d+"
 ```
 
-The `linear` source table accepts `token` and `ticket_pattern` only. `ticket_pattern` is a regular expression. Keys it matches, including the issue identifier, are stored on each event's `refs`. Omit it and collect uses the built-in key shape (`GEN-301`, not `ISO-8601`). An empty `token = ""` is a config error. An invalid `ticket_pattern` is a config error.
+The `linear` source table accepts `token` and `ticket_pattern` only. `ticket_pattern` is a regular expression. Keys it matches, including the issue identifier, are stored on each event's `refs`. Omit it and collect uses the built-in key shape (`GEN-301`, not `ISO-8601`). An empty `token = ""` is a config error until the key is pasted. An invalid `ticket_pattern` is a config error. `env:`, `cmd:`, and `file:` references are optional; see [docs/CONFIG.md](docs/CONFIG.md).
 
 Collect loads issues assigned to or created by the authenticated user whose `updatedAt` falls in the window, including archived issues. Each issue becomes a `ticket` event with its key, title, state, url, and `branchName`. State changes in that issue's history become `ticket_transition` events. The window includes `since` and excludes `until`. The source does not store a cursor; the next collect reads the window again.
 
@@ -363,11 +357,11 @@ weeklog config check
 weeklog collect --source linear
 ```
 
-With `token = "env:LINEAR_API_KEY"` set in the environment, `config check` includes a block like this and does not print the value:
+With the key pasted into `token`, `config check` includes a block like this and does not print the value:
 
 ```text
 source[0] linear
-  token: resolved (env:LINEAR_API_KEY)
+  token: literal
 ```
 
 The index is the source's position in the file. `ticket_pattern` is not a secret and is not listed there.
@@ -393,7 +387,6 @@ The count is the tickets and state transitions kept for the window. `--week 2026
 | `error: source[N].token: command exited 1` | `token = "cmd:..."` and the command fails. Empty output says `command produced empty output`. A command that runs longer than 30 seconds says `command timed out`. |
 | `error: source[N].ticket_pattern: invalid regular expression` | `ticket_pattern` does not compile. |
 | `error: source[N].org: unknown field for linear` | Any source key other than `token` and `ticket_pattern`. |
-| `warning: source[N].token: literal secret; use an env:, cmd:, or file: reference` | The token is written inline. This is a warning. Collect still runs. |
 
 `weeklog collect --source linear` exits before collection with `source linear is not configured` when that block is missing.
 

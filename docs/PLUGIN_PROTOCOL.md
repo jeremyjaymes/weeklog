@@ -71,7 +71,7 @@ Each config field has a `type` and an optional `required` boolean (default false
 |---|---|
 | `string` | One string. |
 | `strings` | An array of strings. |
-| `secret` | One string. weeklog treats it as a secret when it resolves `env:`, `cmd:`, and `file:` references. |
+| `secret` | One string. A literal value is the secret. `env:`, `cmd:`, and `file:` references are optional. |
 
 `weeklog config check` uses this schema for the built-in sources. It does not execute external plugins. `weeklog doctor` runs `describe` and checks the protocol, name, and version.
 

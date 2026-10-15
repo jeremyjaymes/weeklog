@@ -77,6 +77,16 @@ exit 1
 	if !strings.Contains(result.Body, "github = \"octocat\"") || !strings.Contains(result.Body, "token = \"cmd:gh auth token\"") {
 		t.Fatalf("body = %s", result.Body)
 	}
+	if !strings.Contains(result.Body, "Paste your key into token.") || !strings.Contains(result.Body, "# token = \"\"") {
+		t.Fatalf("body = %s", result.Body)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %o, want 0600", info.Mode().Perm())
+	}
 	// The merged codex collector accepts no source keys besides type.
 	if !strings.Contains(result.Body, "[[source]]\ntype = \"codex\"\n\n[[source]]\ntype = \"github\"\n") {
 		t.Fatalf("codex block = %s", result.Body)

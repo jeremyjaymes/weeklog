@@ -94,8 +94,8 @@ type = "codex"
 			t.Fatalf("summary missing %q\n%s", want, summary.Text)
 		}
 	}
-	if !strings.Contains(summary.Warnings, "warning: source[0].token: literal secret") {
-		t.Fatalf("warnings = %s", summary.Warnings)
+	if strings.Contains(summary.Warnings, "literal secret") {
+		t.Fatalf("literal secret was warned\n%s", summary.Warnings)
 	}
 	if alpha.calls != 1 || beta.calls != 1 {
 		t.Fatalf("calls alpha=%d beta=%d", alpha.calls, beta.calls)

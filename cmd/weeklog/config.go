@@ -30,10 +30,11 @@ func newConfigCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check",
 		Short: "Validate config and resolve secret references",
-		Long: `Validate config.toml and resolve env:, cmd:, and file: secret references.
+		Long: `Validate config.toml and resolve optional env:, cmd:, and file: secret references.
 
-The report says whether each secret resolved. It never prints secret values.
-A literal secret in the file is allowed and reported as a warning.`,
+A literal secret in the file is the normal form. The report says whether each
+secret resolved. It never prints secret values. On Unix, a config file that is
+group- or world-readable is a warning.`,
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {

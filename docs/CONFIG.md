@@ -1,6 +1,6 @@
 # Configuration
 
-weeklog reads a TOML file. `weeklog config check` validates that file and resolves secret references. It prints whether each secret resolved and never prints the value.
+weeklog reads a TOML file. `weeklog config check` validates that file. A literal secret is the normal form. Optional `env:`, `cmd:`, and `file:` references are resolved. The report says whether each secret resolved and never prints the value.
 
 ## Location
 
@@ -49,17 +49,18 @@ type = "codex"
 
 [[source]]
 type = "github"
-token = "env:GITHUB_TOKEN" # or "cmd:gh auth token"
+token = "cmd:gh auth token"
 
 [[source]]
 type = "linear"
-token = "env:LINEAR_API_KEY"
+# Paste your key.
+token = ""
 ticket_pattern = "GEN-\\d+"
 
 [[source]] # external plugins use the same table
 type = "basecamp"
 account_id = "123"
-token = "cmd:op read op://dev/basecamp/token"
+token = "cmd:op read op://dev/basecamp/token" # env:, cmd:, and file: are optional
 ```
 
 ### Identity
@@ -88,8 +89,8 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 | `git` | `roots` (array of paths, required), `authors` (array of strings). Each root is scanned for repositories through three directory levels. `authors` matches author emails or names; when omitted, `identity.emails` is used. |
 | `claude-code` | none. Reads `$CLAUDE_CONFIG_DIR/projects` when that variable is set, and `~/.claude/projects` otherwise. |
 | `codex` | none. Reads `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl` when that variable is set, and `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` otherwise. |
-| `github` | `token` (secret, optional). When it is unset, collect runs `gh auth token`. `endpoint` is accepted only when it is an http URL on 127.0.0.1, localhost, or ::1. |
-| `linear` | `token` (secret, required), `ticket_pattern` (regular expression), and the same loopback `endpoint`. Collect reads issues assigned to or created by the API key's user that changed in the window, and their state history. Keys that match `ticket_pattern` are stored on `refs`. When the pattern is omitted, the built-in ticket shape is used. |
+| `github` | `token` (secret, optional). A literal token is supported. `weeklog init` writes `token = "cmd:gh auth token"`. When `token` is unset, collect runs `gh auth token`. `endpoint` is accepted only when it is an http URL on 127.0.0.1, localhost, or ::1. |
+| `linear` | `token` (secret, required). Paste your key into `token`. `ticket_pattern` (regular expression) and the same loopback `endpoint`. Collect reads issues assigned to or created by the API key's user that changed in the window, and their state history. Keys that match `ticket_pattern` are stored on `refs`. When the pattern is omitted, the built-in ticket shape is used. |
 
 Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. `endpoint` on `github` and `linear` is the exception: tests use it to replay recorded HTTP responses against the real binary, and any value that is not loopback http is an error. It is not a setting for the public APIs. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).
 
@@ -106,16 +107,25 @@ These source fields are secrets:
 - Built-in fields marked secret (`token` on `github` and `linear`).
 - On an external source, `token`, `secret`, `password`, `passwd`, `api_key`, and keys ending in `_token`, `_secret`, `_password`, or `_key`.
 
-A secret value is one of:
+A literal value is the normal form. weeklog is a single-user local tool: paste the key into the field. `weeklog init` writes `config.toml` with mode 0600 and uses an empty placeholder, with a comment telling you to paste your key:
+
+```toml
+# Paste your key.
+token = ""
+```
+
+Replace `""` with the key. An empty value is an error. `config check` reports the field as `literal` and does not print the value. The value is still redacted from stored events.
+
+`env:`, `cmd:`, and `file:` are optional alternatives:
 
 | Form | Resolution |
 |---|---|
+| anything else | The secret itself. Config check reports the field as `literal` and does not print the value. |
 | `env:NAME` | The environment variable `NAME`. Unset and empty are errors. Surrounding whitespace is trimmed. |
 | `cmd:<command>` | The command is run with `sh -c` (or `cmd /C` on Windows), with a 30 second limit. Standard error is discarded. Standard output is trimmed and must be non-empty and at most 1 MiB. |
 | `file:<path>` | The file is read, trimmed, and must be non-empty and at most 1 MiB. A leading `~` is expanded. Relative paths are resolved from the config file's directory. |
-| anything else | Allowed, and reported as a warning. Prefer a reference. |
 
-Resolved values are not printed, logged, or included in error text. Command standard error is discarded so a failing command cannot echo a secret into the report. `weeklog config check` prints the reference (`env:GITHUB_TOKEN`, `cmd:...`, `file:...`, or `literal`) and whether resolution worked.
+Resolved values are not printed, logged, or included in error text. Command standard error is discarded so a failing command cannot echo a secret into the report. `weeklog config check` prints `literal` or the reference (`env:NAME`, `cmd:...`, `file:...`) and whether resolution worked. It never prints the secret value.
 
 ## `weeklog config check`
 
@@ -126,7 +136,9 @@ The command reads the selected file and prints a report:
 - `error:` and `warning:` lines.
 - A final `ok`, `N errors`, `N warnings`, or both.
 
-Exit status is 0 when there are no errors. Warnings, including literal secrets, still exit 0. Exit status is 1 when the file cannot be read or parsed, or when the report contains an error.
+On Unix, a config file whose mode has a group or other read bit is a warning: `warning: config: file is group- or world-readable`. The warning does not print the file contents or any secret value.
+
+Exit status is 0 when there are no errors. Warnings, including a group- or world-readable file, still exit 0. Exit status is 1 when the file cannot be read or parsed, or when the report contains an error.
 
 ```bash
 weeklog config check
@@ -144,9 +156,20 @@ weeklog config check --config ~/.config/weeklog/config.toml
 | GitHub | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token. The file sets `token = "cmd:gh auth token"`. The token value is not written or printed. |
 | git | `~/Projects` contains at least one repository within three directory levels, the same depth the git source scans. `roots` is `["~/Projects"]`. |
 
+The file is created with mode 0600. The directory is created with mode 0700.
+
 `identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`. `output.mode` is `both`. The file comments the three modes: `both` writes the weekly file and prints the recap, `file` writes only, and `terminal` prints only.
 
-Sources that are not found are omitted. `weeklog config check` accepts the file. A literal token is not written.
+Sources that are not found are omitted. The file ends with a commented Linear block. Uncomment it and paste your key into `token`:
+
+```toml
+# Linear is not detected. Paste your key into token.
+# [[source]]
+# type = "linear"
+# token = ""
+```
+
+`weeklog config check` accepts the file init writes. A literal token value is not written. GitHub keeps `cmd:gh auth token`.
 
 An existing config is not overwritten. init prints the file it would write and leaves the current file in place. `--force` replaces it.
 
@@ -158,6 +181,6 @@ weeklog init --force
 
 ## `weeklog collect`
 
-`weeklog collect` loads this same file, resolves secret references, and passes the resolved settings to each source. It refuses to collect when config check would report an error. Warnings, including a literal secret, are printed and collection continues.
+`weeklog collect` loads this same file, resolves optional secret references, and passes the resolved settings to each source. A literal secret is passed through as itself. It refuses to collect when config check would report an error. Warnings, including a group- or world-readable config file, are printed and collection continues. Literal secret values are redacted from stored events.
 
 The collect window uses `identity.timezone` and `identity.week_starts`. With no window flags, collect uses the previous full week in that timezone. See the command help for `--week`, `--since`, `--until`, and `--source`.

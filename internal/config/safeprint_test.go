@@ -92,6 +92,9 @@ token = "` + literal + `"
 	if !strings.Contains(result.Report(), "resolved (env:WEEKLOG_TEST_SECRET)") || !strings.Contains(result.Report(), "token: literal") {
 		t.Fatalf("report did not describe secret status\n%s", result.Report())
 	}
+	if strings.Contains(result.Report(), "literal secret") {
+		t.Fatalf("literal secret was warned\n%s", result.Report())
+	}
 	values := result.SecretValues()
 	if len(values) != 2 || values[0] != envSecret || values[1] != literal {
 		t.Fatal("SecretValues mismatch")
