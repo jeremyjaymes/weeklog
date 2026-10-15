@@ -97,6 +97,8 @@ weeklog doctor
 
 `sources` lists built-ins and plugins after a protocol `describe` check. `doctor` checks paths, permissions, and that each plugin speaks protocol v1. It does not print or resolve secrets. The protocol is specified in [docs/PLUGIN_PROTOCOL.md](docs/PLUGIN_PROTOCOL.md).
 
+`examples/weeklog-source-todoist` is a small Python program that speaks the same protocol. It is an example, not a supported source. Copy `weeklog-source-todoist` onto `PATH` and configure a `todoist` source with a `token`. See [examples/weeklog-source-todoist/README.md](examples/weeklog-source-todoist/README.md).
+
 ## Codex
 
 `codex` collects agent sessions from Codex rollout files on the local machine.

@@ -179,7 +179,7 @@ A source whose collector is not implemented yet is skipped and listed. A source 
 
 ## Example
 
-This program answers `describe` and emits one collect event. It is illustrative. A supported example plugin is a later milestone.
+This program answers `describe` and emits one collect event. It is illustrative. The program in `examples/weeklog-source-todoist` is a working Python plugin for the same protocol. It is an example, not a supported source.
 
 ```python
 #!/usr/bin/env python3
