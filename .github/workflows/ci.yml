@@ -38,3 +38,21 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.14.0
+
+  example-todoist:
+    name: example-python-plugin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.27.2"
+
+      - name: Check Python
+        run: python3 --version
+
+      - name: Run the Todoist example through the subprocess adapter
+        run: go test -count=1 -timeout 180s ./internal/source -run '^TestTodoistExample'

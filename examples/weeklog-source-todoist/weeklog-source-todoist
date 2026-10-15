@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""Example weeklog source for completed Todoist tasks.
+
+This is not a supported plugin. It shows that a program written in Python
+can speak protocol v1. Install the executable as weeklog-source-todoist on
+PATH or in the plugin directory.
+
+Config:
+  token     secret, required. Todoist API token. It arrives on stdin.
+  api_base  string, optional. API origin. Default https://api.todoist.com.
+
+Each collect reads one page of completed tasks in the requested window and
+emits a ticket event per task. The response next_cursor is saved for the
+next run.
+"""
+
+import json
+import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
+
+VERSION = "0.1.0"
+DEFAULT_BASE = "https://api.todoist.com"
+COMPLETED = "/api/v1/tasks/completed/by_completion_date"
+
+
+def main():
+    if len(sys.argv) != 2 or sys.argv[1] not in ("describe", "collect"):
+        return fail(1, "usage: weeklog-source-todoist describe|collect")
+    if sys.argv[1] == "describe":
+        write({
+            "protocol": 1,
+            "name": "todoist",
+            "version": VERSION,
+            "config": {
+                "token": {"type": "secret", "required": True},
+                "api_base": {"type": "string"},
+            },
+        })
+        return 0
+    return collect()
+
+
+def collect():
+    try:
+        req = json.load(sys.stdin)
+    except json.JSONDecodeError:
+        return fail(2, "collect request is not JSON")
+    if req.get("protocol") != 1:
+        return fail(2, "protocol must be 1")
+    config = req.get("config") or {}
+    if not isinstance(config, dict):
+        return fail(2, "config must be an object")
+    token = config.get("token")
+    if not isinstance(token, str) or not token.strip():
+        return fail(2, "token is required")
+    base, err = api_base(config.get("api_base"))
+    if err:
+        return fail(2, err)
+    since = parse_time(req.get("since"))
+    until = parse_time(req.get("until"))
+    if since is None or until is None or until <= since:
+        return fail(2, "since and until must be a time range")
+
+    params = {"since": req["since"], "until": req["until"], "limit": "50"}
+    cursor = req.get("cursor")
+    if isinstance(cursor, str) and cursor:
+        params["cursor"] = cursor
+    url = base + COMPLETED + "?" + urllib.parse.urlencode(params)
+    http = urllib.request.Request(url, headers={
+        "Authorization": "Bearer " + token,
+        "Accept": "application/json",
+        "User-Agent": "weeklog-source-todoist/" + VERSION,
+    })
+    try:
+        with urllib.request.urlopen(http, timeout=30) as resp:
+            payload = json.load(resp)
+    except urllib.error.HTTPError as exc:
+        if exc.code in (401, 403):
+            return fail(2, "todoist rejected the token")
+        return fail(1, "todoist HTTP %d" % exc.code)
+    except (urllib.error.URLError, TimeoutError):
+        return fail(1, "todoist request failed")
+    except json.JSONDecodeError:
+        return fail(1, "todoist response is not JSON")
+
+    items = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(items, list):
+        return fail(1, "todoist response has no items array")
+
+    kept = 0
+    skipped = 0
+    for item in items:
+        event, outside = task_event(item, since, until)
+        if outside:
+            skipped += 1
+            continue
+        if event is None:
+            continue
+        write({"type": "event", "event": event})
+        kept += 1
+    if skipped:
+        write({"type": "log", "level": "warn", "msg": skipped_msg(skipped)})
+    write({"type": "log", "level": "info", "msg": collected_msg(kept)})
+    nxt = payload.get("next_cursor") if isinstance(payload, dict) else None
+    if isinstance(nxt, str) and nxt:
+        write({"type": "cursor", "cursor": nxt})
+    return 0
+
+
+def task_event(item, since, until):
+    """Return (event, outside). outside is true when a real task is not in the window."""
+    if not isinstance(item, dict):
+        return None, False
+    raw_id = item.get("id")
+    if raw_id is None:
+        raw_id = item.get("task_id")
+    task_id = str(raw_id).strip() if raw_id is not None else ""
+    completed = item.get("completed_at") or item.get("completed_date")
+    when = parse_time(completed)
+    if not task_id or when is None:
+        return None, False
+    if when < since or when >= until:
+        return None, True
+    event = {
+        "source": "todoist",
+        "source_id": task_id,
+        "kind": "ticket",
+        "ts": completed,
+        "state": "done",
+    }
+    content = item.get("content")
+    if isinstance(content, str) and content.strip():
+        event["title"] = content
+    description = item.get("description")
+    if isinstance(description, str) and description.strip():
+        event["summary"] = description
+    url = item.get("url")
+    if isinstance(url, str) and url.strip():
+        event["url"] = url
+    return event, False
+
+
+def api_base(value):
+    if value is None or value == "":
+        value = DEFAULT_BASE
+    if not isinstance(value, str):
+        return None, "api_base must be a string"
+    base = value.strip().rstrip("/")
+    parsed = urllib.parse.urlparse(base)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return None, "api_base must be an http(s) URL"
+    return base, None
+
+
+def parse_time(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def collected_msg(n):
+    if n == 1:
+        return "collected 1 completed task"
+    return "collected %d completed tasks" % n
+
+
+def skipped_msg(n):
+    if n == 1:
+        return "skipped 1 task outside the window"
+    return "skipped %d tasks outside the window" % n
+
+
+def write(obj):
+    json.dump(obj, sys.stdout, ensure_ascii=False)
+    sys.stdout.write("\n")
+
+
+def fail(code, msg):
+    sys.stderr.write(msg.rstrip() + "\n")
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())
