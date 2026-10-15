@@ -110,12 +110,27 @@ A secret value is one of:
 
 | Form | Resolution |
 |---|---|
-| `env:NAME` | The environment variable `NAME`. Unset and empty are errors. Surrounding whitespace is trimmed. |
+| `env:NAME` | The environment variable `NAME`, when it is set. When it is unset, the same name in `.env` next to the config file. A variable that is set in the environment, even to an empty value, wins over the file. Unset and empty are errors. Surrounding whitespace is trimmed. |
 | `cmd:<command>` | The command is run with `sh -c` (or `cmd /C` on Windows), with a 30 second limit. Standard error is discarded. Standard output is trimmed and must be non-empty and at most 1 MiB. |
 | `file:<path>` | The file is read, trimmed, and must be non-empty and at most 1 MiB. A leading `~` is expanded. Relative paths are resolved from the config file's directory. |
 | anything else | Allowed, and reported as a warning. Prefer a reference. |
 
-Resolved values are not printed, logged, or included in error text. Command standard error is discarded so a failing command cannot echo a secret into the report. `weeklog config check` prints the reference (`env:GITHUB_TOKEN`, `cmd:...`, `file:...`, or `literal`) and whether resolution worked.
+Resolved values are not printed, logged, or included in error text. Command standard error is discarded so a failing command cannot echo a secret into the report. `weeklog config check` prints the reference (`env:GITHUB_TOKEN`, `cmd:...`, `file:...`, or `literal`) and whether resolution worked. A value taken from `.env` is reported as `resolved (env:NAME from .env)`.
+
+### `.env`
+
+weeklog reads `<config dir>/.env` when it checks config or collects. `config.toml` keeps the `env:NAME` reference. `.env` keeps the value. A missing file is ignored.
+
+The file is `KEY=VALUE` lines. Blank lines and lines whose first non-whitespace character is `#` are ignored. `export KEY=VALUE` is the same as `KEY=VALUE`. Text after an unquoted value, starting at whitespace and `#`, is a comment. Double quotes understand `\n`, `\t`, `\\`, and `\"`. Single quotes are literal, including backslashes. Surrounding whitespace is trimmed. `$OTHER` is not expanded. A repeated name uses the last value. The file is at most 1 MiB.
+
+A name that is set in the process environment is used as written there, including when the value is empty. weeklog does not copy `.env` into the process environment, so a `cmd:` reference still sees only the environment the command inherits.
+
+`config check` warns when the file is group- or world-readable and still loads it. A directory, an unreadable file, a file over the size limit, or a line that is not `KEY=VALUE` is an error. The report names the line number and does not include the line. Every non-empty value loaded from the file is redacted like any other resolved secret, including values no source references.
+
+```bash
+# ~/.config/weeklog/.env
+LINEAR_API_KEY=replace-me
+```
 
 ## `weeklog config check`
 
@@ -146,7 +161,9 @@ weeklog config check --config ~/.config/weeklog/config.toml
 
 `identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`. `output.mode` is `both`. The file comments the three modes: `both` writes the weekly file and prints the recap, `file` writes only, and `terminal` prints only.
 
-Sources that are not found are omitted. `weeklog config check` accepts the file. A literal token is not written.
+Sources that are not found are omitted. The file still writes `env:` references for secrets that belong in `.env`: a commented `github` block with `token = "env:GITHUB_TOKEN"` when GitHub was not detected, a commented alternative next to `cmd:gh auth token` when it was, and a commented `linear` block with `token = "env:LINEAR_API_KEY"`. Uncomment a block after setting the matching name in `.env`.
+
+init also creates `.env` next to the config file, with mode `600`. The file comments placeholders such as `LINEAR_API_KEY` and `GITHUB_TOKEN`. It does not contain secret values. An existing `.env` is left unchanged, including when `--force` replaces the config. `weeklog config check` accepts the starter. A literal token is not written.
 
 An existing config is not overwritten. init prints the file it would write and leaves the current file in place. `--force` replaces it.
 

@@ -32,10 +32,11 @@ type Issue struct {
 // CheckResult is the outcome of Check.
 // Formatting or marshaling a result never includes resolved secret values.
 type CheckResult struct {
-	Path    string
-	Config  *Config
-	Issues  []Issue
-	secrets []resolvedSecret
+	Path       string
+	Config     *Config
+	Issues     []Issue
+	secrets    []resolvedSecret
+	envSecrets []string
 }
 
 type resolvedSecret struct {
@@ -43,6 +44,7 @@ type resolvedSecret struct {
 	Key         string
 	Display     string
 	Literal     bool
+	FromFile    bool
 	value       secretValue
 	err         error
 }
@@ -60,7 +62,10 @@ func Check(ctx context.Context, path string) (CheckResult, error) {
 		Config: cfg,
 	}
 	result.Issues = append(result.Issues, validate(cfg)...)
-	secrets, issues := resolveSecrets(ctx, cfg)
+	envFile := loadDotEnv(cfg.Dir)
+	result.Issues = append(result.Issues, envFile.issues...)
+	result.envSecrets = envFile.secretValues()
+	secrets, issues := resolveSecrets(ctx, cfg, envFile.values)
 	result.secrets = secrets
 	result.Issues = append(result.Issues, issues...)
 	redactLiteralSettings(cfg, secrets)
@@ -113,24 +118,29 @@ func (r CheckResult) PluginConfig(index int) (map[string]any, bool) {
 // Unresolved references are omitted. Values are unique and follow first
 // appearance. Callers must not log or display the result.
 func (r CheckResult) SecretValues() []string {
-	if len(r.secrets) == 0 {
+	if len(r.secrets) == 0 && len(r.envSecrets) == 0 {
 		return nil
 	}
-	seen := make(map[string]struct{}, len(r.secrets))
-	out := make([]string, 0, len(r.secrets))
+	seen := make(map[string]struct{}, len(r.secrets)+len(r.envSecrets))
+	out := make([]string, 0, len(r.secrets)+len(r.envSecrets))
+	add := func(value string) {
+		if value == "" {
+			return
+		}
+		if _, ok := seen[value]; ok {
+			return
+		}
+		seen[value] = struct{}{}
+		out = append(out, value)
+	}
 	for _, secret := range r.secrets {
 		if secret.err != nil {
 			continue
 		}
-		value := secret.value.Value()
-		if value == "" {
-			continue
-		}
-		if _, ok := seen[value]; ok {
-			continue
-		}
-		seen[value] = struct{}{}
-		out = append(out, value)
+		add(secret.value.Value())
+	}
+	for _, value := range r.envSecrets {
+		add(value)
 	}
 	if len(out) == 0 {
 		return nil
@@ -191,6 +201,9 @@ func (s resolvedSecret) status() string {
 	}
 	if s.Literal {
 		return "literal"
+	}
+	if s.FromFile {
+		return fmt.Sprintf("resolved (%s from .env)", s.Display)
 	}
 	return fmt.Sprintf("resolved (%s)", s.Display)
 }
@@ -459,7 +472,7 @@ func validateExternalSecrets(index int, src *Source) []Issue {
 	return issues
 }
 
-func resolveSecrets(ctx context.Context, cfg *Config) ([]resolvedSecret, []Issue) {
+func resolveSecrets(ctx context.Context, cfg *Config, file map[string]string) ([]resolvedSecret, []Issue) {
 	var secrets []resolvedSecret
 	var issues []Issue
 	for i := range cfg.Sources {
@@ -493,13 +506,14 @@ func resolveSecrets(ctx context.Context, cfg *Config) ([]resolvedSecret, []Issue
 				issues = append(issues, warn(field, "literal secret; use an env:, cmd:, or file: reference"))
 				continue
 			}
-			resolved, err := resolveSecretRef(ctx, ref, cfg.Dir)
+			resolved, fromFile, err := resolveSecretRef(ctx, ref, cfg.Dir, file)
 			if err != nil {
 				secret.err = err
 				secrets = append(secrets, secret)
 				issues = append(issues, errIssue(field, err.Error()))
 				continue
 			}
+			secret.FromFile = fromFile
 			secret.value = secretValue{s: resolved}
 			secrets = append(secrets, secret)
 		}

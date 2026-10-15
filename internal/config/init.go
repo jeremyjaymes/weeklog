@@ -55,12 +55,17 @@ type SourceStatus struct {
 // InitResult is the starter config init built.
 // Body is the TOML that was written, or that would be written when a file
 // already exists. It contains secret references, never secret values.
+// EnvPath is the .env file next to Path. Init creates it with mode 600
+// when it is missing and leaves an existing file unchanged.
 type InitResult struct {
-	Path    string
-	Wrote   bool
-	Existed bool
-	Body    string
-	Sources []SourceStatus
+	Path       string
+	Wrote      bool
+	Existed    bool
+	EnvPath    string
+	EnvWrote   bool
+	EnvExisted bool
+	Body       string
+	Sources    []SourceStatus
 }
 
 // Init detects local sources and writes a starter config to opts.Path.
@@ -137,13 +142,20 @@ func Init(ctx context.Context, opts InitOptions) (InitResult, error) {
 	}
 	if existed && !opts.Force {
 		result.Existed = true
-		return result, nil
+	} else {
+		if err := writeConfigFile(path, body); err != nil {
+			return result, err
+		}
+		result.Wrote = true
+		result.Existed = existed
 	}
-	if err := writeConfigFile(path, body); err != nil {
+	result.EnvPath = envFilePath(path)
+	wrote, envExisted, err := ensureDotEnv(result.EnvPath)
+	result.EnvWrote = wrote
+	result.EnvExisted = envExisted
+	if err != nil {
 		return result, err
 	}
-	result.Wrote = true
-	result.Existed = existed
 	return result, nil
 }
 
@@ -164,9 +176,17 @@ func (r InitResult) Report() string {
 	}
 	switch {
 	case r.Wrote:
-		fmt.Fprintf(&b, "wrote: %s\n\n%s", oneLine(r.Path), r.Body)
+		fmt.Fprintf(&b, "wrote: %s\n", oneLine(r.Path))
+		if r.EnvWrote {
+			fmt.Fprintf(&b, "wrote .env: %s\n", oneLine(r.EnvPath))
+		}
+		fmt.Fprintf(&b, "\n%s", r.Body)
 	case r.Existed:
-		fmt.Fprintf(&b, "config already exists: %s\nnot overwritten; pass --force to replace it\nwould write:\n\n%s", oneLine(r.Path), r.Body)
+		fmt.Fprintf(&b, "config already exists: %s\nnot overwritten; pass --force to replace it\n", oneLine(r.Path))
+		if r.EnvWrote {
+			fmt.Fprintf(&b, "wrote .env: %s\n", oneLine(r.EnvPath))
+		}
+		fmt.Fprintf(&b, "would write:\n\n%s", r.Body)
 	}
 	return b.String()
 }
@@ -185,7 +205,8 @@ type starter struct {
 
 func renderStarter(s starter) (string, error) {
 	var b strings.Builder
-	b.WriteString("# Written by weeklog init.\n\n[identity]\n")
+	b.WriteString("# Written by weeklog init.\n")
+	b.WriteString("# Put secret values in .env and reference them as env:NAME.\n\n[identity]\n")
 	if s.Email != "" {
 		if err := writeStrings(&b, "emails", []string{s.Email}); err != nil {
 			return "", err
@@ -249,7 +270,17 @@ func renderStarter(s starter) (string, error) {
 		if err := writeString(&b, "token", "cmd:gh auth token"); err != nil {
 			return "", err
 		}
+		b.WriteString("# token = \"env:GITHUB_TOKEN\"\n")
+	} else {
+		b.WriteString("\n# Set GITHUB_TOKEN in .env, then uncomment:\n")
+		b.WriteString("# [[source]]\n")
+		b.WriteString("# type = \"github\"\n")
+		b.WriteString("# token = \"env:GITHUB_TOKEN\"\n")
 	}
+	b.WriteString("\n# Set LINEAR_API_KEY in .env, then uncomment:\n")
+	b.WriteString("# [[source]]\n")
+	b.WriteString("# type = \"linear\"\n")
+	b.WriteString("# token = \"env:LINEAR_API_KEY\"\n")
 	return b.String(), nil
 }
 
@@ -658,13 +689,43 @@ func existingConfig(path string) (bool, error) {
 }
 
 func writeConfigFile(path, body string) error {
+	return writePrivateFile(path, body, "config")
+}
+
+// dotEnvStarter is the .env init writes. Every assignment is commented.
+const dotEnvStarter = `# Secrets for env: references in config.toml.
+# weeklog loads this file from the config directory. A variable already set
+# in the environment takes precedence. Uncomment a line and set the value.
+
+# LINEAR_API_KEY=
+# GITHUB_TOKEN=
+`
+
+func ensureDotEnv(path string) (wrote bool, existed bool, err error) {
+	info, err := os.Lstat(path)
+	if err == nil {
+		if info.IsDir() {
+			return false, true, fmt.Errorf(".env path is a directory: %s", path)
+		}
+		return false, true, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return false, false, fmt.Errorf("read .env: %w", err)
+	}
+	if err := writePrivateFile(path, dotEnvStarter, ".env"); err != nil {
+		return false, false, err
+	}
+	return true, false, nil
+}
+
+func writePrivateFile(path, body, what string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("create config directory: %w", err)
+		return fmt.Errorf("create %s directory: %w", what, err)
 	}
-	f, err := os.CreateTemp(dir, ".weeklog-config-*.tmp")
+	f, err := os.CreateTemp(dir, ".weeklog-"+what+"-*.tmp")
 	if err != nil {
-		return fmt.Errorf("write config: %w", err)
+		return fmt.Errorf("write %s: %w", what, err)
 	}
 	tmp := f.Name()
 	ok := false
@@ -675,16 +736,16 @@ func writeConfigFile(path, body string) error {
 	}()
 	if _, err := io.WriteString(f, body); err != nil {
 		_ = f.Close()
-		return fmt.Errorf("write config: %w", err)
+		return fmt.Errorf("write %s: %w", what, err)
 	}
 	if err := f.Close(); err != nil {
-		return fmt.Errorf("write config: %w", err)
+		return fmt.Errorf("write %s: %w", what, err)
 	}
 	if err := os.Chmod(tmp, 0o600); err != nil {
-		return fmt.Errorf("write config: %w", err)
+		return fmt.Errorf("write %s: %w", what, err)
 	}
 	if err := os.Rename(tmp, path); err != nil {
-		return fmt.Errorf("write config: %w", err)
+		return fmt.Errorf("write %s: %w", what, err)
 	}
 	ok = true
 	return nil

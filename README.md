@@ -22,7 +22,7 @@ weeklog week --md
 go build -ldflags "-X main.version=v0.1.0" -o weeklog ./cmd/weeklog
 ```
 
-`weeklog init` writes `$XDG_CONFIG_HOME/weeklog/config.toml`, or `~/.config/weeklog/config.toml` when `XDG_CONFIG_HOME` is unset. macOS uses `~/.config` when that variable is unset. `--config` selects another file.
+`weeklog init` writes `$XDG_CONFIG_HOME/weeklog/config.toml`, or `~/.config/weeklog/config.toml` when `XDG_CONFIG_HOME` is unset, and a mode `600` `.env` beside it. macOS uses `~/.config` when that variable is unset. `--config` selects another file.
 
 An existing file is left unchanged unless `--force` is set. init enables a source only when it can find it:
 
@@ -33,7 +33,7 @@ An existing file is left unchanged unless `--force` is set. init enables a sourc
 | codex | `$CODEX_HOME` is a directory, or `~/.codex` when that variable is unset |
 | github | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token |
 
-Linear is not detected. Add that block by hand. See [Linear](#linear). A hand-written file has the same shape:
+Linear is not detected. init leaves a commented `linear` block that uses `env:LINEAR_API_KEY`, and a commented `LINEAR_API_KEY` placeholder in `.env`. Uncomment both after you create a key. See [Linear](#linear) and [Config and .env](#config-and-env). A hand-written file has the same shape:
 
 ```toml
 [identity]
@@ -68,6 +68,36 @@ weeklog config check --config ./config.toml
 ```
 
 `config check` resolves `env:`, `cmd:`, and `file:` secret references and reports whether each one resolved. It does not print secret values. See [docs/CONFIG.md](docs/CONFIG.md).
+
+## Config and .env
+
+`config.toml` holds settings and secret references. It does not hold secret values. `.env` in the same directory holds those values as `KEY=VALUE` lines.
+
+weeklog loads `.env` while it resolves an `env:NAME` reference. A variable that is already set in the environment wins, including when that value is empty. Otherwise the value comes from `.env`. `config check` says when a secret came from the file and does not print it:
+
+```text
+token: resolved (env:LINEAR_API_KEY from .env)
+```
+
+A value taken from the process environment is `resolved (env:LINEAR_API_KEY)`.
+
+`weeklog init` creates `.env` with mode `600` and commented placeholders such as `LINEAR_API_KEY` and `GITHUB_TOKEN`. It leaves an existing `.env` in place, including when `--force` replaces `config.toml`. The starter config writes `env:` references for those names. Uncomment a placeholder, set the value, and uncomment the matching source block.
+
+Blank lines and lines that start with `#` are ignored. A line may start with `export`. Double quotes understand `\n`, `\t`, `\\`, and `\"`. Single quotes are literal. Surrounding whitespace is trimmed. `$OTHER` is not expanded. The last assignment wins when a name is repeated.
+
+If `.env` is readable by the group or by other users, `config check` warns and still loads it. Every non-empty value in the file is redacted the same way as a secret resolved from the config, including a value no source references.
+
+```bash
+# ~/.config/weeklog/.env
+LINEAR_API_KEY=replace-me
+```
+
+```toml
+# ~/.config/weeklog/config.toml
+[[source]]
+type = "linear"
+token = "env:LINEAR_API_KEY"
+```
 
 ## Sources
 
@@ -363,7 +393,7 @@ weeklog config check
 weeklog collect --source linear
 ```
 
-With `token = "env:LINEAR_API_KEY"` set in the environment, `config check` includes a block like this and does not print the value:
+With `token = "env:LINEAR_API_KEY"` set in the environment, `config check` includes a block like this and does not print the value. A value loaded from `.env` is reported as `resolved (env:LINEAR_API_KEY from .env)`.
 
 ```text
 source[0] linear

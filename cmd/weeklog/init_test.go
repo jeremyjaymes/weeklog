@@ -24,8 +24,23 @@ func TestInitCommandWritesAndChecks(t *testing.T) {
 		t.Fatalf("stderr = %q", stderr)
 	}
 	path := filepath.Join(home, "xdg", "weeklog", "config.toml")
-	if !strings.Contains(stdout, "wrote: "+path) || !strings.Contains(stdout, "claude-code: enabled (~/.claude)") {
+	envPath := filepath.Join(home, "xdg", "weeklog", ".env")
+	if !strings.Contains(stdout, "wrote: "+path) || !strings.Contains(stdout, "wrote .env: "+envPath) || !strings.Contains(stdout, "claude-code: enabled (~/.claude)") {
 		t.Fatalf("stdout = %s", stdout)
+	}
+	envInfo, err := os.Stat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if envInfo.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("mode = %o", envInfo.Mode().Perm())
+	}
+	envBody, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(envBody), "# LINEAR_API_KEY=") || !strings.Contains(stdout, "env:LINEAR_API_KEY") {
+		t.Fatalf("env = %s\nstdout = %s", envBody, stdout)
 	}
 	if !strings.Contains(stdout, "git: enabled (1 repository under ~/Projects)") {
 		t.Fatalf("stdout = %s", stdout)
@@ -109,9 +124,15 @@ func TestInitCommandConfigFlag(t *testing.T) {
 	if _, err := os.Stat(other); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := os.Stat(filepath.Join(home, "custom", ".env")); err != nil {
+		t.Fatal(err)
+	}
 	defaultPath := filepath.Join(home, "xdg", "weeklog", "config.toml")
 	if _, err := os.Stat(defaultPath); !os.IsNotExist(err) {
 		t.Fatalf("default path was created: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(defaultPath), ".env")); !os.IsNotExist(err) {
+		t.Fatalf("default .env was created: %v", err)
 	}
 	if !strings.Contains(stdout, "wrote: "+other) {
 		t.Fatalf("stdout = %s", stdout)
@@ -123,7 +144,7 @@ func TestInitHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"CODEX_HOME", "~/.claude", "--force", "gh", "output.mode"} {
+	for _, want := range []string{"CODEX_HOME", "~/.claude", "--force", "gh", "output.mode", ".env", "LINEAR_API_KEY"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}

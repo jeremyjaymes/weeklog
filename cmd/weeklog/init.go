@@ -27,8 +27,13 @@ The starter sets output.dir to ~/journal/weeklog and output.mode to both.
 both writes the weekly file and prints the recap on a terminal. file writes
 only. terminal prints only.
 
-An existing file is left unchanged. init prints the config it would write.
---force replaces the file. Token values are never written or printed.`,
+init also writes .env next to the config file, with mode 600 and commented
+placeholders such as LINEAR_API_KEY. The config file references those
+variables with env:. An existing .env is left unchanged.
+
+An existing config file is left unchanged. init prints the config it would
+write. --force replaces the config file and still keeps an existing .env.
+Token values are never written or printed.`,
 		Example: `  weeklog init
   weeklog init --config ./config.toml
   weeklog init --force`,

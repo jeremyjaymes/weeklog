@@ -116,7 +116,7 @@ exit 1
 		t.Fatal(err)
 	}
 	assertStatus(t, result, "github", false, "gh is not authenticated")
-	if strings.Contains(result.Body, "type = \"github\"") || strings.Contains(result.Report(), canary) {
+	if strings.Contains(result.Body, "\ntype = \"github\"\n") || strings.Contains(result.Report(), canary) {
 		t.Fatal(result.Report())
 	}
 }

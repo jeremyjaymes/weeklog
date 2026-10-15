@@ -42,7 +42,7 @@ func TestInitWritesDetectedSources(t *testing.T) {
 	if !strings.Contains(result.Body, "timezone = \"America/Chicago\"") {
 		t.Fatalf("body = %s", result.Body)
 	}
-	if strings.Contains(result.Body, "type = \"github\"") {
+	if strings.Contains(result.Body, "\ntype = \"github\"\n") {
 		t.Fatalf("github was enabled without gh\n%s", result.Body)
 	}
 
@@ -113,8 +113,11 @@ func TestInitSkipsMissingSources(t *testing.T) {
 	assertStatus(t, result, "git", false, "no repositories under ~/Projects")
 	assertStatus(t, result, "claude-code", false, "$CLAUDE_CONFIG_DIR not found")
 	assertStatus(t, result, "codex", false, "$CODEX_HOME is not a directory")
-	if strings.Contains(result.Body, "[[source]]") {
+	if strings.Contains(result.Body, "\n[[source]]\n") {
 		t.Fatalf("sources were written\n%s", result.Body)
+	}
+	if !strings.Contains(result.Body, "token = \"env:LINEAR_API_KEY\"") || !strings.Contains(result.Body, "token = \"env:GITHUB_TOKEN\"") {
+		t.Fatalf("body missing env refs\n%s", result.Body)
 	}
 	check, err := Check(context.Background(), path)
 	if err != nil {
@@ -214,6 +217,79 @@ func TestInitKeepsExistingConfig(t *testing.T) {
 	check, err := Check(context.Background(), path)
 	if err != nil || !check.OK() {
 		t.Fatalf("check: %v\n%s", err, check.Report())
+	}
+}
+
+func TestInitWritesDotEnv(t *testing.T) {
+	home := isolateInitHome(t)
+	path := filepath.Join(home, "xdg", "weeklog", "config.toml")
+	result, err := Init(context.Background(), InitOptions{Path: path})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Wrote || !result.EnvWrote {
+		t.Fatalf("wrote config=%v env=%v", result.Wrote, result.EnvWrote)
+	}
+	envPath := filepath.Join(home, "xdg", "weeklog", ".env")
+	if result.EnvPath != envPath {
+		t.Fatalf("env path = %s", result.EnvPath)
+	}
+	if !strings.Contains(result.Report(), "wrote .env: "+envPath) {
+		t.Fatal(result.Report())
+	}
+	if !strings.Contains(result.Body, "token = \"env:LINEAR_API_KEY\"") || !strings.Contains(result.Body, "token = \"env:GITHUB_TOKEN\"") {
+		t.Fatalf("body = %s", result.Body)
+	}
+	info, err := os.Stat(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("mode = %o", info.Mode().Perm())
+	}
+	envBody, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(envBody), "LINEAR_API_KEY") || !strings.Contains(string(envBody), "GITHUB_TOKEN") {
+		t.Fatalf("env = %s", envBody)
+	}
+	for _, line := range strings.Split(string(envBody), "\n") {
+		trim := strings.TrimSpace(line)
+		if trim == "" || strings.HasPrefix(trim, "#") {
+			continue
+		}
+		t.Fatalf("uncommented .env line %q", trim)
+	}
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cfg.Sources) != 0 {
+		t.Fatalf("sources = %+v", cfg.Sources)
+	}
+
+	const marker = "wksec_DOTENV_KEEP_7788"
+	kept := "# LINEAR_API_KEY=\nLINEAR_API_KEY=" + marker + "\n"
+	if err := os.WriteFile(envPath, []byte(kept), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	again, err := Init(context.Background(), InitOptions{Path: path, Force: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !again.Wrote || again.EnvWrote || !again.EnvExisted {
+		t.Fatalf("force wrote config=%v env=%v existed=%v", again.Wrote, again.EnvWrote, again.EnvExisted)
+	}
+	if strings.Contains(again.Report(), marker) {
+		t.Fatal("report printed the .env secret")
+	}
+	got, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != kept {
+		t.Fatalf("env = %q", got)
 	}
 }
 

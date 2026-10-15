@@ -32,8 +32,13 @@ func newConfigCheckCmd() *cobra.Command {
 		Short: "Validate config and resolve secret references",
 		Long: `Validate config.toml and resolve env:, cmd:, and file: secret references.
 
-The report says whether each secret resolved. It never prints secret values.
-A literal secret in the file is allowed and reported as a warning.`,
+env:NAME uses the process environment. When that variable is unset, weeklog
+reads NAME from .env in the config directory. A variable that is already set
+takes precedence, even when its value is empty. The report says whether each
+secret resolved and when the value came from .env. It never prints secret values.
+
+A literal secret in the file is allowed and reported as a warning. A .env
+file that is readable by the group or by other users is a warning.`,
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, _ []string) error {

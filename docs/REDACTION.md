@@ -22,7 +22,7 @@ Plugins are not a special case. Their events go through the same write path.
 
 Rules run in this order. A match that is already inside `[REDACTED:...]` is left alone, and running redaction twice does not change the text.
 
-1. **Config secrets.** Every value resolved from the config (`env:`, `cmd:`, `file:`, or a literal token) is removed wherever it appears. `config check` does not print these values. A value of 8 characters or more is removed even inside a longer word. A shorter value is removed only when it is a whole token, bounded by a non-alphanumeric character or the ends of the string. The label is `config-secret`.
+1. **Config secrets.** Every value resolved from the config (`env:`, `cmd:`, `file:`, or a literal token) is removed wherever it appears. Non-empty values loaded from `.env` are included, even when no source references them. `config check` does not print these values. A value of 8 characters or more is removed even inside a longer word. A shorter value is removed only when it is a whole token, bounded by a non-alphanumeric character or the ends of the string. The label is `config-secret`.
 2. **Known shapes**, adapted from the gitleaks rule set. The label is the kind that matched.
 
    | Shape | Label |

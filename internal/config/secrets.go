@@ -100,36 +100,48 @@ func validEnvName(name string) bool {
 	return true
 }
 
-func resolveSecretRef(ctx context.Context, ref secretRef, configDir string) (string, error) {
+func resolveSecretRef(ctx context.Context, ref secretRef, configDir string, file map[string]string) (string, bool, error) {
 	if err := ctx.Err(); err != nil {
-		return "", errors.New("canceled")
+		return "", false, errors.New("canceled")
 	}
 	switch ref.Kind {
 	case refEnv:
-		return resolveEnv(ref.Env)
+		return resolveEnv(ref.Env, file)
 	case refCmd:
-		return runCommand(ctx, ref.Command)
+		value, err := runCommand(ctx, ref.Command)
+		return value, false, err
 	case refFile:
 		path, err := resolveSecretFile(configDir, ref.Path)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return readSecretFile(path)
+		value, err := readSecretFile(path)
+		return value, false, err
 	default:
-		return "", errors.New("literal secrets are not resolved")
+		return "", false, errors.New("literal secrets are not resolved")
 	}
 }
 
-func resolveEnv(name string) (string, error) {
-	value, ok := os.LookupEnv(name)
-	if !ok {
-		return "", fmt.Errorf("environment variable %s is unset", name)
+// resolveEnv returns the process environment when the variable is set,
+// including when the value is empty. Otherwise it uses file, which is the
+// config directory's .env. fromFile is true when the returned value or the
+// empty-file error came from file.
+func resolveEnv(name string, file map[string]string) (value string, fromFile bool, err error) {
+	if value, ok := os.LookupEnv(name); ok {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return "", false, fmt.Errorf("environment variable %s is empty", name)
+		}
+		return value, false, nil
 	}
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "", fmt.Errorf("environment variable %s is empty", name)
+	if value, ok := file[name]; ok {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return "", true, fmt.Errorf("environment variable %s is empty in .env", name)
+		}
+		return value, true, nil
 	}
-	return value, nil
+	return "", false, fmt.Errorf("environment variable %s is unset", name)
 }
 
 func resolveSecretFile(configDir, raw string) (string, error) {
