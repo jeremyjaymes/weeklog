@@ -1,0 +1,31 @@
+╭────────────────────────────────────────────────────────────────────────╮
+│ Week 2026-W41 (Oct 5 – Oct 11)                                         │
+│ Shipped 2 · In progress 1 · Explored 1 · Abandoned 1                   │
+│ ~2h15m agent time · 5 commits · 1 PR merged                            │
+│                                                                        │
+│ Days                                                                   │
+│ Mon ░░░░░░░░░░░░░░░░░░   0                                             │
+│ Tue ██░░░░░░░░░░░░░░░░   1                                             │
+│ Wed ██░░░░░░░░░░░░░░░░   1                                             │
+│ Thu ██████████████████   7                                             │
+│ Fri ██████████░░░░░░░░   4                                             │
+│ Sat ██░░░░░░░░░░░░░░░░   1                                             │
+│ Sun ░░░░░░░░░░░░░░░░░░   0                                             │
+│                                                                        │
+│ Sources                                                                │
+│ Claude Code  · · · ▅ · · ·   2                                         │
+│ Codex        · · ▃ · · · ·   1                                         │
+│ Git          · · · █ ▃ ▃ ·   5                                         │
+│ GitHub       · · · ▅ ▃ · ·   3                                         │
+│ Linear       · ▃ · · ▅ · ·   3                                         │
+│                                                                        │
+│ Top repos                                                              │
+│ acme/smilepostcards-laravel              2 commits · 1 PR · 2 sessions │
+│ acme/otto                                  1 commit · 1 PR · 1 session │
+│ acme/old                                                      1 commit │
+│ acme/zebra                                                    1 commit │
+│                                                                        │
+│ Top PRs                                                                │
+│ #5 Admin is_admin gate            merged · acme/smilepostcards-laravel │
+│ #12 Retry webhook delivery                            open · acme/otto │
+╰────────────────────────────────────────────────────────────────────────╯

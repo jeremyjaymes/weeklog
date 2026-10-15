@@ -18,4 +18,10 @@
 // Markdown comes from an embedded text/template. output.template replaces it.
 // Text between <!-- weeklog:notes --> markers is kept when a Markdown file
 // is overwritten. JSON is the same report without the notes block.
+//
+// The terminal recap is a separate view of the same report. It is a bordered
+// summary: one bar per day, a lane per source, and the top repositories and
+// pull requests. Recap.Delta and Recap.Graph are empty slots. A later change
+// can fill Delta with a week-over-week line, or Graph with the session to
+// commit to pull-request chain, without changing the renderer.
 package report

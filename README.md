@@ -55,7 +55,7 @@ type = "claude-code"
 
 `config check` reports whether each secret reference resolved and does not print the value. `sources` lists built-in collectors and plugins after a protocol `describe` check. `collect` reads the previous full week in the configured timezone, stores the events, and runs the linker. `week --md` writes that week as Markdown. When `output.dir` is set, the file is `<output.dir>/<year>-W<week>.md`. The file is overwritten on the next run. Text between `<!-- weeklog:notes -->` markers is kept.
 
-`--week 2026-W41` selects an ISO week on both `collect` and `week`. `weeklog week --out -` prints Markdown to standard output. `weeklog week --json` prints the same report as JSON.
+`--week 2026-W41` selects an ISO week on both `collect` and `week`. `weeklog week --out -` prints the report to standard output: a boxed recap on a terminal, and Markdown when the output is a pipe, when `NO_COLOR` is set, or when `--plain` is set. `weeklog week --json` prints the same report as JSON.
 
 ## Config
 
@@ -454,6 +454,8 @@ weeklog unlink git/0123456789abcdef0123456789abcdef01234567
 ## Week
 
 `weeklog week` renders the previous full week. `--week`, `--since`, and `--until` select another window, using the same rules as `weeklog collect`.
+
+On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, and the top repositories and pull requests. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
 
 ```bash
 weeklog week

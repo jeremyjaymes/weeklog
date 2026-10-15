@@ -54,16 +54,24 @@ func heading(label, dates string) string {
 }
 
 func summaryLine(sum Summary, agent time.Duration) string {
-	counts := fmt.Sprintf("Shipped %d · In progress %d · Explored %d", sum.Shipped, sum.InProgress, sum.Explored)
+	counts, detail := summaryParts(sum, agent)
+	return "**" + counts + "** · " + detail
+}
+
+// summaryParts splits the week summary into the status counts and the
+// activity detail. The Markdown line bolds the counts. The terminal recap
+// prints the same words without that markup.
+func summaryParts(sum Summary, agent time.Duration) (counts, detail string) {
+	counts = fmt.Sprintf("Shipped %d · In progress %d · Explored %d", sum.Shipped, sum.InProgress, sum.Explored)
 	if sum.Abandoned > 0 {
 		counts += fmt.Sprintf(" · Abandoned %d", sum.Abandoned)
 	}
-	return fmt.Sprintf("**%s** · ~%s agent time · %s · %s",
-		counts,
+	detail = fmt.Sprintf("~%s agent time · %s · %s",
 		formatDuration(agent),
 		plural(sum.Commits, "commit", "commits"),
 		prMergedPhrase(sum.PRsMerged),
 	)
+	return counts, detail
 }
 
 func prMergedPhrase(n int) string {
