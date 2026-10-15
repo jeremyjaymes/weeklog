@@ -123,4 +123,4 @@ git/0123456789abcdef0123456789abcdef01234567
   reason: leftover:github.com/jeremyjaymes/otto 2026-10-09, override:link
 ```
 
-`weeklog week` renders those reasons in the item's `Linked by:` line, for both Markdown and JSON.
+`weeklog week` renders those reasons in the item's `Linked by:` line, for both Markdown and JSON. The terminal recap also draws them on the session chain, dimmed under each session, commit, pull request, or issue. Soft-link reasons (`files overlap`, `git branch`, `head branch`, `only session in window`, `revert`) use `o` and `:`. Hard-link reasons use `*` and `|`. `--no-graph` hides that panel. A pipe, `NO_COLOR`, or `--plain` still prints the Markdown report.

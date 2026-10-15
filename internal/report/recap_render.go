@@ -26,6 +26,7 @@ const (
 	colorEmpty  = "#374151"
 	colorDelta  = "#FBBF24"
 	colorGraph  = "#C4B5FD"
+	colorSoft   = "#FDBA74"
 
 	recapBarWidth  = 18
 	recapLaneLabel = 12
@@ -119,8 +120,7 @@ func paintLine(ren *lipgloss.Renderer, line []span) string {
 }
 
 // layoutRecap is the section order. Delta sits under the summary. Graph sits
-// under the source lanes. A nil panel adds no rows, which is how issues 52
-// and 55 plug in later.
+// under the source lanes. A nil panel adds no rows.
 func layoutRecap(recap Recap, width int) [][]span {
 	if width < 24 {
 		width = 24
@@ -140,7 +140,7 @@ func layoutRecap(recap Recap, width int) [][]span {
 	lines = append(lines, daySection(recap.Days, width)...)
 	lines = append(lines, nil)
 	lines = append(lines, laneSection(recap.Lanes, width)...)
-	if recap.Graph != nil && graphLines(recap.Graph) != nil {
+	if graphReady(recap.Graph) {
 		lines = append(lines, nil)
 		lines = append(lines, graphSection(recap.Graph, width)...)
 	}
@@ -240,10 +240,32 @@ func graphSection(g *Graph, width int) [][]span {
 		title = strings.TrimSpace(g.Title)
 	}
 	lines := [][]span{titleSpan(title)}
+	if g != nil && len(g.Chains) > 0 {
+		for i, chain := range g.Chains {
+			if i > 0 {
+				lines = append(lines, nil)
+			}
+			lines = append(lines, renderChain(chain, width)...)
+		}
+		if g.More > 0 {
+			lines = append(lines, graphMoreSpan(g.More, width))
+		}
+		return lines
+	}
 	for _, row := range graphLines(g) {
 		lines = append(lines, []span{{text: truncate(row, width), color: colorGraph}})
 	}
 	return lines
+}
+
+func graphReady(g *Graph) bool {
+	if g == nil {
+		return false
+	}
+	if len(g.Chains) > 0 {
+		return true
+	}
+	return graphLines(g) != nil
 }
 
 func graphLines(g *Graph) []string {
@@ -259,6 +281,114 @@ func graphLines(g *Graph) []string {
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// renderChain draws one work item in git-log order: session, then commits,
+// then the pull request or issue. A hard link uses * and |. A soft link uses
+// o and :. The stored reason sits on the following line, dimmed.
+func renderChain(chain GraphChain, width int) [][]span {
+	var lines [][]span
+	headConnect := len(chain.Tail) > 0 || chain.More > 0
+	for i, node := range chain.Head {
+		connect := i < len(chain.Head)-1 || headConnect
+		lines = append(lines, renderGraphNode(node, width, connect)...)
+	}
+	if chain.More > 0 {
+		lines = append(lines, renderCollapse(chain, width))
+	}
+	for i, node := range chain.Tail {
+		connect := i < len(chain.Tail)-1
+		lines = append(lines, renderGraphNode(node, width, connect)...)
+	}
+	return lines
+}
+
+func renderGraphNode(node GraphNode, width int, connect bool) [][]span {
+	glyph, edge, color := "*", "|", colorGraph
+	if node.Soft {
+		glyph, edge, color = "o", ":", colorSoft
+	}
+	lines := [][]span{{
+		{text: graphHeadText(glyph, node.Label, node.Detail, width), color: color, bold: true},
+	}}
+	reason := strings.TrimSpace(node.Reason)
+	if reason == "" {
+		if connect {
+			lines = append(lines, []span{{text: truncate(edge, width), color: color}})
+		}
+		return lines
+	}
+	prefix := "  "
+	if connect {
+		prefix = edge + " "
+	}
+	if utf8.RuneCountInString(prefix) >= width {
+		return append(lines, []span{{text: truncate(prefix, width), color: color}})
+	}
+	shown := truncate(reason, width-utf8.RuneCountInString(prefix))
+	return append(lines, []span{
+		{text: prefix, color: color},
+		{text: shown, color: colorMuted, faint: true},
+	})
+}
+
+func graphHeadText(glyph, label, detail string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	mark := glyph + " "
+	if utf8.RuneCountInString(mark) > width {
+		return truncate(mark, width)
+	}
+	label = strings.TrimSpace(label)
+	if label == "" {
+		label = "event"
+	}
+	rest := width - utf8.RuneCountInString(mark)
+	detail = strings.TrimSpace(detail)
+	if detail == "" || rest <= utf8.RuneCountInString(label) {
+		return mark + truncate(label, rest)
+	}
+	const sep = " · "
+	room := rest - utf8.RuneCountInString(label) - utf8.RuneCountInString(sep)
+	if room < 4 {
+		return mark + truncate(label, rest)
+	}
+	return mark + label + sep + truncate(detail, room)
+}
+
+func renderCollapse(chain GraphChain, width int) []span {
+	edge, color := "|", colorGraph
+	if len(chain.Tail) > 0 && chain.Tail[0].Soft {
+		edge, color = ":", colorSoft
+	} else if len(chain.Tail) == 0 && len(chain.Head) > 0 && chain.Head[len(chain.Head)-1].Soft {
+		edge, color = ":", colorSoft
+	}
+	return graphEdgeMore(edge, color, chain.More, width)
+}
+
+func graphMoreSpan(n, width int) []span {
+	return []span{{text: truncate(moreLabel(n), width), color: colorMuted, faint: true}}
+}
+
+func graphEdgeMore(edge, color string, n, width int) []span {
+	prefix := edge + " "
+	label := moreLabel(n)
+	if utf8.RuneCountInString(prefix) >= width {
+		return []span{{text: truncate(prefix+label, width), color: colorMuted, faint: true}}
+	}
+	room := width - utf8.RuneCountInString(prefix)
+	return []span{
+		{text: prefix, color: color},
+		{text: truncate(label, room), color: colorMuted, faint: true},
+	}
+}
+
+func moreLabel(n int) string {
+	if n < 1 {
+		n = 1
+	}
+	return "+" + strconv.Itoa(n) + " more"
 }
 
 func repoSection(repos []RepoStat, width int) [][]span {

@@ -12,13 +12,13 @@ import (
 // Recap is the terminal view of one week. RenderRecap draws it. The Markdown
 // and JSON reports stay on Report; this value is not part of those documents.
 //
-// Delta and Graph are optional panels. They are nil until a later change
-// fills them. RenderRecap already reserves their places, so those changes
-// only build the data:
+// Delta is an optional panel. It stays nil until a later change fills it.
+// Graph is filled from linker work items when those items are passed to
+// BuildRecap. RenderRecap reserves both places:
 //
 //   - Delta is the week-over-week line (issue 55). It is drawn under the
 //     summary and above the day bars.
-//   - Graph is the session → commit → pull-request chain (issue 52). It is
+//   - Graph is the session → commit → pull-request or issue chain. It is
 //     drawn under the source lanes and above the top repositories.
 type Recap struct {
 	Heading string
@@ -73,12 +73,16 @@ type Delta struct {
 	Line string
 }
 
-// Graph is the session → commit → pull-request chain. Issue 52 sets it.
-// Lines are plain rows. RenderRecap styles them; the producer does not.
+// Graph is the session → commit → pull-request or issue chain.
+// Chains are built from linker work items. Lines is a preformatted fallback
+// drawn when Chains is empty, so a caller can still inject a row.
+// More is the number of chains omitted after Chains.
 type Graph struct {
 	// Title is the panel heading. Empty uses "Chain".
-	Title string
-	Lines []string
+	Title  string
+	Lines  []string
+	Chains []GraphChain
+	More   int
 }
 
 // WithDelta returns a copy of r that shows the week-over-week line.
@@ -126,8 +130,9 @@ var extraLaneColors = []string{
 
 // BuildRecap summarizes rep and the stored events that fall in its window.
 // Events outside [Since, Until) are ignored. loc buckets events onto days;
-// nil means UTC.
-func BuildRecap(rep Report, events []store.Record, loc *time.Location) Recap {
+// nil means UTC. items are the linker's work items. A nil or empty list
+// leaves the session chain hidden.
+func BuildRecap(rep Report, events []store.Record, items []store.WorkItem, loc *time.Location) Recap {
 	if loc == nil {
 		loc = time.UTC
 	}
@@ -199,6 +204,9 @@ func BuildRecap(rep Report, events []store.Record, loc *time.Location) Recap {
 			Label: day.Weekday().String()[:3],
 			Count: dayCounts[i],
 		}
+	}
+	if g := buildSessionGraph(items, events, rep.Since, rep.Until); g != nil {
+		recap.Graph = g
 	}
 	return recap
 }

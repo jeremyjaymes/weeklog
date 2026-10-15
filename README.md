@@ -456,13 +456,14 @@ weeklog unlink git/0123456789abcdef0123456789abcdef01234567
 
 `weeklog week` renders the previous full week. `--week`, `--since`, and `--until` select another window, using the same rules as `weeklog collect`.
 
-On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, and the top repositories and pull requests. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
+On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, the session chain, and the top repositories and pull requests. The chain reads like `git log --graph`. Each row is an AI session (Claude or Codex), a commit it produced, and the pull request or issue the linker attached. The stored reason is dimmed under the row. A hard link uses `*` and `|`. A soft link uses `o` and `:`. A chain that does not fit collapses to a `+N more` row, and so does a week with more chains than the panel can show. `--no-graph` hides the chain. The same panel is drawn without color in the plain recap. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
 
 When `output.dir` is set, stdout is a terminal, and `--out` is omitted, `output.mode` `both` (the default) writes `<output.dir>/<week>.md` and still prints that recap, then a dim line such as `saved ~/…/2026-W42.md`. A pipe writes the file and prints where it was written. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore `output.mode`. Without `output.dir`, the report is printed to the terminal.
 
 ```bash
 weeklog week
 weeklog week --week 2026-W41
+weeklog week --no-graph
 weeklog week --json
 weeklog week --out ~/journal/weeklog/2026-W41.md
 ```

@@ -19,6 +19,20 @@
 │ GitHub       · · · ▅ ▃ · ·   3                                         │
 │ Linear       · ▃ · · ▅ · ·   3                                         │
 │                                                                        │
+│ Session chain                                                          │
+│ * Claude · Admin gate                                                  │
+│ | ref:GEN-341 in prompt                                                │
+│ * Claude · Admin gate tests                                            │
+│ | ref:GEN-341 in prompt                                                │
+│ * aaaaaaa · Add is_admin gate                                          │
+│ | ref:GEN-341 in commit message                                        │
+│ * bbbbbbb · Cover is_admin gate                                        │
+│ | ref:GEN-341 in commit message                                        │
+│ * #5 · Admin is_admin gate                                             │
+│ | ref:GEN-341 in title                                                 │
+│ * GEN-341 · Admin is_admin gate                                        │
+│   ref:GEN-341 ticket                                                   │
+│                                                                        │
 │ Top repos                                                              │
 │ acme/smilepostcards-laravel              2 commits · 1 PR · 2 sessions │
 │ acme/otto                                  1 commit · 1 PR · 1 session │

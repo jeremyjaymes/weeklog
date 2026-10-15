@@ -20,8 +20,11 @@
 // is overwritten. JSON is the same report without the notes block.
 //
 // The terminal recap is a separate view of the same report. It is a bordered
-// summary: one bar per day, a lane per source, and the top repositories and
-// pull requests. Recap.Delta and Recap.Graph are empty slots. A later change
-// can fill Delta with a week-over-week line, or Graph with the session to
-// commit to pull-request chain, without changing the renderer.
+// summary: one bar per day, a lane per source, the session chain, and the
+// top repositories and pull requests. The chain is built from linker work
+// items inside the window: an AI session, the commits it produced, and the
+// pull request or issue it was linked to. The stored reason is dimmed. A
+// soft link is drawn with o and :, and a hard link with * and |. Long chains
+// collapse to a "+N more" row. The same panel is drawn when color is off.
+// Recap.Delta is an empty slot for a later week-over-week line.
 package report
