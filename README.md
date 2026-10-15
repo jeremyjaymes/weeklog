@@ -452,11 +452,15 @@ weeklog link linear/GEN-301 git/0123456789abcdef0123456789abcdef01234567
 weeklog unlink git/0123456789abcdef0123456789abcdef01234567
 ```
 
+## Attribution
+
+Each item in the weekly report has one actor: Human, Claude, Codex, Cloud agent, or Unknown. weeklog reads the actor from evidence on the stored events. A `Co-authored-by` trailer is checked first, then a session the linker joined to a commit, then the session source when the item has no commit, then an agent branch prefix such as `cursor/`. A commit or pull request with no agent evidence is Human. An item whose evidence is missing or names more than one actor is Unknown. The recap, the Markdown summary, and `--json` count the items for each actor. `--json` also includes `actor` and `actor_evidence` on every item. See [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).
+
 ## Week
 
 `weeklog week` renders the previous full week. `--week`, `--since`, and `--until` select another window, using the same rules as `weeklog collect`.
 
-On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, the session chain, and the top repositories and pull requests. The chain reads like `git log --graph`. Each row is an AI session (Claude or Codex), a commit it produced, and the pull request or issue the linker attached. The stored reason is dimmed under the row. A hard link uses `*` and `|`. A soft link uses `o` and `:`. A chain that does not fit collapses to a `+N more` row, and so does a week with more chains than the panel can show. `--no-graph` hides the chain. The same panel is drawn without color in the plain recap. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
+On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, per-actor counts, the session chain, and the top repositories and pull requests. The chain reads like `git log --graph`. Each row is an AI session (Claude or Codex), a commit it produced, and the pull request or issue the linker attached. The stored reason is dimmed under the row. A hard link uses `*` and `|`. A soft link uses `o` and `:`. A chain that does not fit collapses to a `+N more` row, and so does a week with more chains than the panel can show. `--no-graph` hides the chain. The same panel is drawn without color in the plain recap. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
 
 When `output.dir` is set, stdout is a terminal, and `--out` is omitted, `output.mode` `both` (the default) writes `<output.dir>/<week>.md` and still prints that recap, then a dim line such as `saved ~/…/2026-W42.md`. A pipe writes the file and prints where it was written. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore `output.mode`. Without `output.dir`, the report is printed to the terminal.
 
@@ -468,7 +472,7 @@ weeklog week --json
 weeklog week --out ~/journal/weeklog/2026-W41.md
 ```
 
-The report groups linked work into Shipped, In progress, Explored, and Abandoned / stale. Commits and sessions that are not linked yet are still listed. Reviews, comments, issues, and unknown events are counted under Other activity.
+The report groups linked work into Shipped, In progress, Explored, and Abandoned / stale. Each item is tagged with the actor from [Attribution](#attribution). The summary line under the heading counts items per actor. Commits and sessions that are not linked yet are still listed. Reviews, comments, issues, and unknown events are counted under Other activity.
 
 Time is the sum of agent-session durations and is labeled as an estimate. An item with no session uses 15 minutes for each cluster of commits. The Markdown file starts with `week`, `generated_at`, and `weeklog_version` front matter.
 

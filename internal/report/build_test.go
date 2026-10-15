@@ -39,6 +39,31 @@ func TestGoldenWeek(t *testing.T) {
 	if !strings.Contains(md, "~2h15m agent time") || !strings.Contains(md, "5 commits") || !strings.Contains(md, "1 PR merged") {
 		t.Fatalf("summary = %s", rep.Summary.Line)
 	}
+	if !strings.Contains(md, "Actors · Human 2 · Claude 1 · Codex 1 · Cloud agent 1") {
+		t.Fatalf("missing actor counts\n%s", md)
+	}
+	for _, want := range []string{
+		"Actor: Claude · session-commit",
+		"Actor: Cloud agent · branch",
+		"Actor: Codex · session",
+		"Actor: Human · human",
+	} {
+		if !strings.Contains(md, want) {
+			t.Fatalf("missing %q\n%s", want, md)
+		}
+	}
+	for _, want := range []string{
+		`"actor": "claude"`,
+		`"actor_evidence": "session-commit"`,
+		`"actor": "cloud_agent"`,
+		`"actor_evidence": "branch"`,
+		`"id": "codex"`,
+		`"label": "Cloud agent"`,
+	} {
+		if !strings.Contains(string(js), want) {
+			t.Fatalf("json missing %q\n%s", want, js)
+		}
+	}
 }
 
 func TestEmptyWeek(t *testing.T) {
@@ -197,8 +222,11 @@ func TestCommitClusters(t *testing.T) {
 	if it.EstimateSeconds != int((30 * time.Minute).Seconds()) {
 		t.Fatalf("estimate = %d", it.EstimateSeconds)
 	}
-	if len(it.Bullets) != 1 || it.Bullets[0] != "2 commits (~30m estimate) · app" {
+	if len(it.Bullets) != 2 || it.Bullets[0] != "Actor: Human · human" || it.Bullets[1] != "2 commits (~30m estimate) · app" {
 		t.Fatalf("bullet = %#v", it.Bullets)
+	}
+	if it.Actor != "human" || it.ActorEvidence != "human" {
+		t.Fatalf("actor = %s evidence = %s", it.Actor, it.ActorEvidence)
 	}
 }
 

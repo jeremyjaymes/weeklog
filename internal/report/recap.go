@@ -17,7 +17,7 @@ import (
 // BuildRecap. RenderRecap reserves both places:
 //
 //   - Delta is the week-over-week line (issue 55). It is drawn under the
-//     summary and above the day bars.
+//     summary. Actor counts are drawn under that, above the day bars.
 //   - Graph is the session → commit → pull-request or issue chain. It is
 //     drawn under the source lanes and above the top repositories.
 type Recap struct {

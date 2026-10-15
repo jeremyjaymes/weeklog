@@ -1,0 +1,654 @@
+[
+  {
+    "name": "trailer claude beats cursor branch",
+    "note": "A Co-authored-by trailer is the first rule. The cursor/ branch is a later rule and does not change the actor.",
+    "want_actor": "claude",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Add the gate",
+        "summary": "Add the gate\n\nCo-authored-by: Claude <noreply@anthropic.com>",
+        "branch": "cursor/admin-gate",
+        "actor": "alice@example.com",
+        "reason": "branch:cursor/admin-gate"
+      }
+    ]
+  },
+  {
+    "name": "trailer beats a different session",
+    "note": "The commit names Codex. A linked Claude session is a lower rule.",
+    "want_actor": "codex",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Retry webhooks",
+        "summary": "Retry webhooks\n\nCo-authored-by: OpenAI Codex <codex@openai.com>",
+        "reason": "files overlap: 2"
+      },
+      {
+        "kind": "agent_session",
+        "source": "claude-code",
+        "title": "look at webhooks",
+        "reason": "files overlap: 2"
+      }
+    ]
+  },
+  {
+    "name": "two known trailers conflict",
+    "note": "Claude and Codex are both named on the commit. The item stays Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "conflict",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Mixed",
+        "summary": "Mixed\n\nCo-authored-by: Claude <noreply@anthropic.com>\nCo-authored-by: Codex <codex@openai.com>"
+      }
+    ]
+  },
+  {
+    "name": "trailer case and model name",
+    "note": "The trailer token is case-insensitive and a Claude model name still maps to Claude.",
+    "want_actor": "claude",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "summary": "Ship it\r\n\r\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>"
+      }
+    ]
+  },
+  {
+    "name": "codex gpt trailer",
+    "note": "A gpt-codex trailer with no mailbox is Codex.",
+    "want_actor": "codex",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "pr",
+        "source": "github",
+        "title": "Retry",
+        "summary": "Body\n\nCo-authored-by: gpt-5-codex"
+      }
+    ]
+  },
+  {
+    "name": "cursor trailer",
+    "note": "cursoragent@cursor.com is the cloud agent identity.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "summary": "Fix\n\nCo-authored-by: Cursor <cursoragent@cursor.com>"
+      }
+    ]
+  },
+  {
+    "name": "human co-author is not an agent",
+    "note": "A second person on the trailer is not agent evidence. The commit stays Human.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "actor": "alice@example.com",
+        "summary": "Pair\n\nCo-authored-by: Jane Doe <jane@example.com>",
+        "branch": "main"
+      }
+    ]
+  },
+  {
+    "name": "person named claude is not claude",
+    "note": "The name Claude with a personal mailbox is not the Claude agent.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "summary": "Notes\n\nCo-authored-by: Claude Smith <claude.smith@gmail.com>"
+      }
+    ]
+  },
+  {
+    "name": "anthropic employee mailbox is not claude",
+    "note": "An anthropic.com mailbox that is not the Claude noreply identity is not agent evidence.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "summary": "Notes\n\nCo-authored-by: Jane <jane@anthropic.com>"
+      }
+    ]
+  },
+  {
+    "name": "unrecognized agent trailer",
+    "note": "Copilot is an agent with no actor in the catalog. The item is Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "unrecognized-agent",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "summary": "Notes\n\nCo-authored-by: Copilot <copilot@github.com>",
+        "branch": "feature"
+      }
+    ]
+  },
+  {
+    "name": "known trailer plus unlisted agent",
+    "note": "Claude and an unlisted bot are both evidence. The item is Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "conflict",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "summary": "Notes\n\nCo-authored-by: Claude <noreply@anthropic.com>\nCo-authored-by: dependabot[bot] <dependabot[bot]@users.noreply.github.com>"
+      }
+    ]
+  },
+  {
+    "name": "author email is the cursor agent",
+    "note": "The commit actor field is the same identity evidence as a trailer.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "actor": "cursoragent@cursor.com",
+        "title": "Generated",
+        "branch": "feature/by-hand"
+      }
+    ]
+  },
+  {
+    "name": "cursor agent login",
+    "note": "The GitHub login cursoragent is the cloud agent. A login of Claude is not.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "pr",
+        "source": "github",
+        "actor": "cursoragent",
+        "title": "Fix webhooks",
+        "branch": "feature/webhooks"
+      }
+    ]
+  },
+  {
+    "name": "github login claude is a person",
+    "note": "A pull request author login is not matched against agent display names.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "pr",
+        "source": "github",
+        "actor": "Claude",
+        "title": "Review follow-up",
+        "branch": "feature/review"
+      }
+    ]
+  },
+  {
+    "name": "session commit beats branch",
+    "note": "The linker joined the Claude session to the commit. cursor/ would be Cloud agent on its own.",
+    "want_actor": "claude",
+    "want_evidence": "session-commit",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Add is_admin gate",
+        "branch": "cursor/admin-gate",
+        "reason": "ref:GEN-341 in commit message"
+      },
+      {
+        "kind": "agent_session",
+        "source": "claude-code",
+        "title": "Admin gate",
+        "branch": "cursor/admin-gate",
+        "reason": "ref:GEN-341 in prompt"
+      },
+      {
+        "kind": "pr",
+        "source": "github",
+        "title": "Admin is_admin gate",
+        "branch": "cursor/admin-gate",
+        "reason": "ref:GEN-341 in title"
+      }
+    ]
+  },
+  {
+    "name": "session commit source alias",
+    "note": "A session source of claude is the same actor as claude-code.",
+    "want_actor": "claude",
+    "want_evidence": "session-commit",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Edit",
+        "reason": "sha:abc in pr"
+      },
+      {
+        "kind": "agent_session",
+        "source": "Claude",
+        "title": "Edit",
+        "reason": "sha:abc in pr"
+      }
+    ]
+  },
+  {
+    "name": "two sessions conflict",
+    "note": "Claude and Codex are both linked to the commit. The item stays Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "conflict",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Edit",
+        "reason": "files overlap: 1"
+      },
+      {
+        "kind": "agent_session",
+        "source": "claude-code",
+        "reason": "files overlap: 1"
+      },
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "reason": "files overlap: 1"
+      }
+    ]
+  },
+  {
+    "name": "unmapped session linked to a commit",
+    "note": "The session source is not in the catalog. The item is Unknown even though the branch is cursor/.",
+    "want_actor": "unknown",
+    "want_evidence": "unrecognized-agent",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "branch": "cursor/spike",
+        "reason": "files overlap: 1"
+      },
+      {
+        "kind": "agent_session",
+        "source": "opencode",
+        "reason": "files overlap: 1"
+      }
+    ]
+  },
+  {
+    "name": "override link counts",
+    "note": "weeklog link is a hard reason, so the Codex session and the commit are a session-to-commit link.",
+    "want_actor": "codex",
+    "want_evidence": "session-commit",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Notes",
+        "reason": "override:link"
+      },
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "reason": "override:link"
+      }
+    ]
+  },
+  {
+    "name": "cursor branch",
+    "note": "A cursor/ branch with no trailer and no session is a cloud agent.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "branch",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Retry webhook delivery",
+        "branch": "cursor/webhooks",
+        "actor": "alice@example.com"
+      },
+      {
+        "kind": "pr",
+        "source": "github",
+        "title": "Retry webhook delivery",
+        "branch": "cursor/webhooks",
+        "reason": "branch:cursor/webhooks"
+      }
+    ]
+  },
+  {
+    "name": "branch only in the reason",
+    "note": "The event branch is empty. The linker reason still carries cursor/.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "branch",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Retry",
+        "reason": "git branch:cursor/webhooks"
+      }
+    ]
+  },
+  {
+    "name": "head branch reason",
+    "note": "A head branch reason uses the same prefix rule.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "branch",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "reason": "head branch:Cursor/Fix"
+      }
+    ]
+  },
+  {
+    "name": "full ref branch",
+    "note": "refs/heads/ and refs/remotes/ are stripped before the prefix is read.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "branch",
+    "events": [
+      {
+        "kind": "ticket",
+        "source": "linear",
+        "branch": "refs/remotes/origin/cursor/fix-webhooks"
+      },
+      {
+        "kind": "commit",
+        "source": "git",
+        "branch": "refs/heads/cursor/fix-webhooks"
+      }
+    ]
+  },
+  {
+    "name": "cursor is not a prefix inside the name",
+    "note": "feature/cursor-fix does not start with cursor/.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "branch": "feature/cursor-fix",
+        "title": "Edit"
+      }
+    ]
+  },
+  {
+    "name": "branch named cursor",
+    "note": "The prefix requires cursor/ and a rest of the name.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "branch": "cursor",
+        "title": "Edit"
+      }
+    ]
+  },
+  {
+    "name": "session on a cursor branch",
+    "note": "A session with no commit keeps its source. The cursor/ branch on that session does not replace Codex.",
+    "want_actor": "codex",
+    "want_evidence": "session",
+    "events": [
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "title": "Fix Stripe webhook retries",
+        "branch": "cursor/fix-webhooks",
+        "reason": "session only"
+      }
+    ]
+  },
+  {
+    "name": "session only codex",
+    "note": "A Codex session with no commit is Codex. session only is not a session-to-commit link.",
+    "want_actor": "codex",
+    "want_evidence": "session",
+    "events": [
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "title": "Try Lob adapter spike",
+        "reason": "session only"
+      }
+    ]
+  },
+  {
+    "name": "session and pull request without a commit",
+    "note": "There is no commit, so the session source is the evidence.",
+    "want_actor": "claude",
+    "want_evidence": "session",
+    "events": [
+      {
+        "kind": "pr",
+        "source": "github",
+        "title": "Spike",
+        "branch": "feature/spike",
+        "reason": "branch:feature/spike"
+      },
+      {
+        "kind": "agent_session",
+        "source": "claude-code",
+        "reason": "branch:feature/spike"
+      }
+    ]
+  },
+  {
+    "name": "mixed sessions and no commit",
+    "note": "Claude and Codex both explored the item. The actor is Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "conflict",
+    "events": [
+      {
+        "kind": "pr",
+        "source": "github",
+        "branch": "main",
+        "reason": "branch:main"
+      },
+      {
+        "kind": "agent_session",
+        "source": "claude-code",
+        "reason": "branch:main"
+      },
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "reason": "branch:main"
+      }
+    ]
+  },
+  {
+    "name": "unmapped session alone",
+    "note": "A session source weeklog does not know is Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "unrecognized-agent",
+    "events": [
+      {
+        "kind": "agent_session",
+        "source": "opencode",
+        "reason": "session only"
+      }
+    ]
+  },
+  {
+    "name": "leftover session and commit",
+    "note": "Pass 3 grouped them by repository and day. That is not a session-to-commit link, so the item is Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "unlinked",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Bump version",
+        "branch": "main",
+        "reason": "leftover:github.com/acme/zebra 2026-10-10"
+      },
+      {
+        "kind": "agent_session",
+        "source": "claude-code",
+        "reason": "leftover:github.com/acme/zebra 2026-10-10"
+      }
+    ]
+  },
+  {
+    "name": "unlink does not join a session",
+    "note": "override:unlink is not a link. The session and the commit stay Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "unlinked",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "reason": "override:unlink"
+      },
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "reason": "override:unlink"
+      }
+    ]
+  },
+  {
+    "name": "plain commit is human",
+    "note": "A commit with no agent evidence is Human.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "actor": "alice@example.com",
+        "title": "Bump version",
+        "branch": "main"
+      }
+    ]
+  },
+  {
+    "name": "commit with an empty author is human",
+    "note": "The human rule does not require the author field. It requires a commit and no agent evidence.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Revert \"ship the spike\"",
+        "branch": "wip/old"
+      }
+    ]
+  },
+  {
+    "name": "pull request alone is human",
+    "note": "A pull request on an ordinary branch is Human.",
+    "want_actor": "human",
+    "want_evidence": "human",
+    "events": [
+      {
+        "kind": "pr",
+        "source": "github",
+        "actor": "alice",
+        "title": "Edge case",
+        "branch": "feature/edge",
+        "reason": "leftover:github.com/acme/edge 2026-10-09"
+      }
+    ]
+  },
+  {
+    "name": "ticket alone",
+    "note": "A ticket with no commit, pull request, session, or agent branch is Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "no-evidence",
+    "events": [
+      {
+        "kind": "ticket",
+        "source": "linear",
+        "title": "Ship the gate",
+        "branch": "feature/GEN-220-gate",
+        "actor": "Alice",
+        "reason": "ref:GEN-220 ticket"
+      }
+    ]
+  },
+  {
+    "name": "ticket on a cursor branch",
+    "note": "The ticket records a cursor/ branch, which is cloud-agent evidence.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "branch",
+    "events": [
+      {
+        "kind": "ticket",
+        "source": "linear",
+        "title": "Fix Stripe webhook retries",
+        "branch": "cursor/fix-webhooks",
+        "reason": "ref:GEN-301 ticket"
+      }
+    ]
+  },
+  {
+    "name": "review and comment",
+    "note": "Reviews and comments are not attribution evidence.",
+    "want_actor": "unknown",
+    "want_evidence": "no-evidence",
+    "events": [
+      {
+        "kind": "pr_review",
+        "source": "github",
+        "title": "LGTM",
+        "actor": "alice"
+      },
+      {
+        "kind": "comment",
+        "source": "linear",
+        "title": "note"
+      }
+    ]
+  },
+  {
+    "name": "prompt that quotes a trailer",
+    "note": "Session text is not scanned for trailers. The session source is the evidence.",
+    "want_actor": "codex",
+    "want_evidence": "session",
+    "events": [
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "title": "Co-authored-by: Claude <noreply@anthropic.com>",
+        "summary": "Co-authored-by: Claude <noreply@anthropic.com>",
+        "reason": "session only"
+      }
+    ]
+  },
+  {
+    "name": "empty item",
+    "note": "No events is Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "no-evidence",
+    "events": []
+  }
+]

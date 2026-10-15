@@ -33,14 +33,24 @@ type Report struct {
 // Summary counts the week. Line is the Markdown summary, including the
 // estimate marker.
 type Summary struct {
-	Shipped      int    `json:"shipped"`
-	InProgress   int    `json:"in_progress"`
-	Explored     int    `json:"explored"`
-	Abandoned    int    `json:"abandoned"`
-	AgentSeconds int    `json:"agent_seconds"`
-	Commits      int    `json:"commits"`
-	PRsMerged    int    `json:"prs_merged"`
-	Line         string `json:"line"`
+	Shipped      int          `json:"shipped"`
+	InProgress   int          `json:"in_progress"`
+	Explored     int          `json:"explored"`
+	Abandoned    int          `json:"abandoned"`
+	AgentSeconds int          `json:"agent_seconds"`
+	Commits      int          `json:"commits"`
+	PRsMerged    int          `json:"prs_merged"`
+	Actors       []ActorCount `json:"actors,omitempty"`
+	// ActorLine is the Markdown summary of Actors. It is not repeated in JSON.
+	ActorLine string `json:"-"`
+	Line      string `json:"line"`
+}
+
+// ActorCount is how many work items share one actor.
+type ActorCount struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+	Count int    `json:"count"`
 }
 
 // Section is one status group, in display order.
@@ -56,6 +66,8 @@ type Item struct {
 	Title           string    `json:"title"`
 	Heading         string    `json:"heading"`
 	Status          string    `json:"status"`
+	Actor           string    `json:"actor"`
+	ActorEvidence   string    `json:"actor_evidence"`
 	Repo            string    `json:"repo,omitempty"`
 	RepoName        string    `json:"repo_name,omitempty"`
 	Branch          string    `json:"branch,omitempty"`
@@ -196,6 +208,8 @@ func assemble(events []store.Record, items []store.WorkItem, opt Options) (Repor
 	rep.OtherLine = joinOther(rep.Other)
 	rep.Sections = sectionsOf(built)
 	rep.Summary = summarize(rep.Sections, events, opt.Since, opt.Until)
+	rep.Summary.Actors = actorCounts(rep.Sections)
+	rep.Summary.ActorLine = actorLine(rep.Summary.Actors)
 	return rep, nil
 }
 
@@ -311,12 +325,16 @@ func newItem(id int64, title, status string, shown, all []store.Record, reasons 
 	key := ticketKeyOf(all, reasons)
 	reasonList := collectReasons(reasons)
 	bullets := itemBullets(prs, commits, sessions, tickets, estimate, name, loc, reasonList)
+	attributed := attributeItem(all, reasons)
+	bullets = append([]string{actorBullet(attributed)}, bullets...)
 
 	it := Item{
 		ID:              id,
 		Title:           strings.TrimSpace(title),
 		Heading:         itemHeading(title, key),
 		Status:          status,
+		Actor:           attributed.Actor,
+		ActorEvidence:   attributed.Evidence,
 		Repo:            repo,
 		RepoName:        name,
 		Branch:          commonBranch(shown),

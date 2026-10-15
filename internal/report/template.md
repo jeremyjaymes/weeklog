@@ -7,6 +7,9 @@ weeklog_version: {{.Version}}
 # {{.Heading}}
 
 {{.Summary.Line}}
+{{- if .Summary.ActorLine}}
+{{.Summary.ActorLine}}
+{{- end}}
 {{range .Sections}}
 ## {{.Title}}
 {{range .Items}}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jeremyjaymes/weeklog/internal/actor"
 	"github.com/jeremyjaymes/weeklog/internal/event"
 	"github.com/jeremyjaymes/weeklog/internal/store"
 )
@@ -307,6 +308,59 @@ func activityBullet(commits int, groups []sessionGroup, estimate time.Duration, 
 		line += " · " + repo
 	}
 	return line
+}
+
+func attributeItem(all []store.Record, reasons []string) actor.Result {
+	events := make([]actor.Event, len(all))
+	for i, rec := range all {
+		reason := ""
+		if i < len(reasons) {
+			reason = reasons[i]
+		}
+		events[i] = actor.Event{
+			Kind:    rec.Kind,
+			Source:  rec.Source,
+			Actor:   rec.Actor,
+			Title:   rec.Title,
+			Summary: rec.Summary,
+			Branch:  rec.Branch,
+			Reason:  reason,
+		}
+	}
+	return actor.Attribute(events)
+}
+
+func actorBullet(res actor.Result) string {
+	return "Actor: " + actor.Label(res.Actor) + " · " + res.Evidence
+}
+
+func actorCounts(sections []Section) []ActorCount {
+	var ids []string
+	for _, section := range sections {
+		for _, item := range section.Items {
+			ids = append(ids, item.Actor)
+		}
+	}
+	raw := actor.Counts(ids)
+	if len(raw) == 0 {
+		return nil
+	}
+	out := make([]ActorCount, len(raw))
+	for i, count := range raw {
+		out[i] = ActorCount{ID: count.ID, Label: count.Label, Count: count.N}
+	}
+	return out
+}
+
+func actorLine(counts []ActorCount) string {
+	if len(counts) == 0 {
+		return ""
+	}
+	parts := make([]string, len(counts))
+	for i, count := range counts {
+		parts[i] = fmt.Sprintf("%s %d", count.Label, count.Count)
+	}
+	return "Actors · " + strings.Join(parts, " · ")
 }
 
 func linkedBullet(reasons []string) string {
