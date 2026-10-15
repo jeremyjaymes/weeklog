@@ -28,9 +28,7 @@ func newRootCmd() *cobra.Command {
 		Short: "Build a Markdown weekly log from pluggable sources",
 		Long: `weeklog pulls a developer's week from pluggable sources (git, coding agents,
 pull requests, and tickets), links the activity into units of work, and writes
-a plain Markdown weekly log.
-
-This build is pre-alpha. Implemented commands: version, init, config check, sources, doctor, collect, link-run, link, unlink, explain, week.`,
+a plain Markdown weekly log.`,
 		SilenceUsage: true,
 		Version:      version,
 	}

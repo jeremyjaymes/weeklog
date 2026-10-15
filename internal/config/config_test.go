@@ -800,6 +800,74 @@ token = "file:empty.txt"
 	}
 }
 
+func TestCheckLoopbackEndpoint(t *testing.T) {
+	const secret = "wksec_LOOP_ENDPOINT_1a"
+	t.Setenv("WEEKLOG_TEST_SECRET", secret)
+	path := writeConfig(t, `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "github"
+token = "env:WEEKLOG_TEST_SECRET"
+endpoint = " http://127.0.0.1:9/graphql "
+[[source]]
+type = "linear"
+token = "env:WEEKLOG_TEST_SECRET"
+endpoint = "http://localhost:9"
+`)
+	result, err := Check(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.OK() {
+		t.Fatalf("report = %s", result.Report())
+	}
+	if strings.Contains(result.Report(), secret) || strings.Contains(result.Report(), "127.0.0.1") {
+		t.Fatalf("report = %s", hide(result.Report(), secret))
+	}
+	github, ok := result.PluginConfig(0)
+	if !ok || github["endpoint"] != " http://127.0.0.1:9/graphql " || github["token"] != secret {
+		t.Fatal("github plugin config did not keep the loopback endpoint and resolved token")
+	}
+	linear, ok := result.PluginConfig(1)
+	if !ok || linear["endpoint"] != "http://localhost:9" || linear["token"] != secret {
+		t.Fatal("linear plugin config did not keep the loopback endpoint and resolved token")
+	}
+
+	rejected := writeConfig(t, `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "github"
+endpoint = "https://127.0.0.1/graphql"
+[[source]]
+type = "linear"
+token = "env:WEEKLOG_TEST_SECRET"
+endpoint = "http://example.com/graphql"
+[[source]]
+type = "git"
+roots = ["/tmp"]
+endpoint = "http://127.0.0.1:9"
+`)
+	result, err = Check(context.Background(), rejected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := result.Report()
+	if result.OK() || strings.Contains(report, secret) {
+		t.Fatalf("report = %s", hide(report, secret))
+	}
+	for _, want := range []string{
+		"source[0].endpoint: must be an http URL on 127.0.0.1, localhost, or ::1",
+		"source[1].endpoint: must be an http URL on 127.0.0.1, localhost, or ::1",
+		"source[2].endpoint: unknown field for git",
+	} {
+		if !strings.Contains(report, want) {
+			t.Fatalf("report missing %q\n%s", want, report)
+		}
+	}
+}
+
 func writeConfig(t *testing.T, body string) string {
 	t.Helper()
 	return writeConfigIn(t, t.TempDir(), body)

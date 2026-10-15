@@ -1,35 +1,39 @@
 # weeklog
 
-An open-source CLI that pulls your week from pluggable sources (git, coding agents, pull requests, and tickets), links the activity into units of work, and writes a plain Markdown weekly log you own.
-
-**Status: pre-alpha.** `weeklog version`, `weeklog init`, `weeklog config check`, `weeklog sources`, `weeklog doctor`, `weeklog collect`, `weeklog link-run`, `weeklog link`, `weeklog unlink`, `weeklog explain`, and `weeklog week` are implemented.
+weeklog is a CLI that reads a week of work from pluggable sources, links that activity into units of work, and writes a Markdown log.
 
 ## Quickstart
 
-Requires Go 1.23 or newer. From a checkout of this repository, install the command from the main package at `./cmd/weeklog`:
+Requires Go 1.23 or newer. From a checkout of this repository:
 
 ```bash
 go install ./cmd/weeklog
-```
-
-`go install` writes the binary to `$(go env GOPATH)/bin`. Put that directory on `PATH` before running `weeklog`:
-
-```bash
 export PATH="$(go env GOPATH)/bin:$PATH"
-weeklog version
+weeklog init
+weeklog config check
+weeklog sources
+weeklog collect
+weeklog week --md
 ```
 
-Or build a binary in the current directory:
+`go install` writes the binary to `$(go env GOPATH)/bin`. A development build prints `weeklog version dev`. Release builds inject the version at link time:
 
 ```bash
-go build -o weeklog ./cmd/weeklog
+go build -ldflags "-X main.version=v0.1.0" -o weeklog ./cmd/weeklog
 ```
 
-`weeklog version` prints `weeklog version dev` for a development build.
+`weeklog init` writes `$XDG_CONFIG_HOME/weeklog/config.toml`, or `~/.config/weeklog/config.toml` when `XDG_CONFIG_HOME` is unset. macOS uses `~/.config` when that variable is unset. `--config` selects another file.
 
-`weeklog init` writes `~/.config/weeklog/config.toml`, or `$XDG_CONFIG_HOME/weeklog/config.toml` when that variable is set. macOS uses `~/.config` when `XDG_CONFIG_HOME` is unset. `--config` selects another file.
+An existing file is left unchanged unless `--force` is set. init enables a source only when it can find it:
 
-init enables Claude Code when `$CLAUDE_CONFIG_DIR` is a directory, or `~/.claude` when that variable is unset. Codex uses `$CODEX_HOME` the same way, otherwise `~/.codex`. GitHub is enabled when the `gh` CLI is logged in, and git when `~/Projects` contains repositories. Sources that are missing are omitted. An existing file is left unchanged unless `--force` is set. A hand-written file has the same shape:
+| Source | Enabled when |
+|---|---|
+| git | `~/Projects` contains a repository within three directory levels |
+| claude-code | `$CLAUDE_CONFIG_DIR` is a directory, or `~/.claude` when that variable is unset |
+| codex | `$CODEX_HOME` is a directory, or `~/.codex` when that variable is unset |
+| github | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token |
+
+Linear is not detected. Add that block by hand. See [Linear](#linear). A hand-written file has the same shape:
 
 ```toml
 [identity]
@@ -49,34 +53,9 @@ authors = ["you@example.com"]
 type = "claude-code"
 ```
 
-`git` scans the `roots` directories. `claude-code` reads `$CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when that variable is unset. `codex` reads `$CODEX_HOME/sessions`, or `~/.codex/sessions` when that variable is unset. Setup is in [Codex](#codex). init writes that source, with no keys besides `type`, when `$CODEX_HOME` or `~/.codex` is a directory. `github` reads pull requests, reviews, and issues from the GitHub GraphQL API. Setup, the config block, token access, and errors are in [GitHub](#github). `linear` reads issues and state history from the Linear GraphQL API. Setup is in [Linear](#linear).
+`config check` reports whether each secret reference resolved and does not print the value. `sources` lists built-in collectors and plugins after a protocol `describe` check. `collect` reads the previous full week in the configured timezone, stores the events, and runs the linker. `week --md` writes that week as Markdown. When `output.dir` is set, the file is `<output.dir>/<year>-W<week>.md`. The file is overwritten on the next run. Text between `<!-- weeklog:notes -->` markers is kept.
 
-```bash
-weeklog init
-weeklog config check
-weeklog collect
-weeklog week
-```
-
-`config check` reports whether each secret reference resolved and does not print the value. `collect` reads the previous full week in the configured timezone, stores the events, and runs the linker. `week` writes that week to `~/journal/weeklog/<year>-W<week>.md` when `output.dir` is set. The file is overwritten on the next run, and text between `<!-- weeklog:notes -->` markers is kept.
-
-Use `--week 2026-W41` on both commands for a specific ISO week. `weeklog week --out -` prints Markdown to standard output. `weeklog week --json` prints the same report as JSON.
-
-## Build
-
-Requires Go 1.23 or newer. Install from a checkout with the main package path:
-
-```bash
-go install ./cmd/weeklog
-export PATH="$(go env GOPATH)/bin:$PATH"
-weeklog version
-```
-
-`go install` writes the binary to `$(go env GOPATH)/bin`. A development build prints `weeklog version dev`. Release builds inject the version at link time:
-
-```bash
-go build -ldflags "-X main.version=v0.1.0" -o weeklog ./cmd/weeklog
-```
+`--week 2026-W41` selects an ISO week on both `collect` and `week`. `weeklog week --out -` prints Markdown to standard output. `weeklog week --json` prints the same report as JSON.
 
 ## Config
 
@@ -93,14 +72,42 @@ weeklog config check --config ./config.toml
 
 Built-in sources are compiled into the binary. An external plugin is an executable named `weeklog-source-<name>` on `PATH` or in the plugin directory (`$XDG_DATA_HOME/weeklog/plugins`, or `~/.local/share/weeklog/plugins`).
 
+| Source | What it reads | Setup |
+|---|---|---|
+| `git` | commits under `roots` | [Git](#git) |
+| `claude-code` | local Claude Code transcripts | [Claude Code](#claude-code) |
+| `codex` | local Codex rollout files | [Codex](#codex) |
+| `github` | pull requests, reviews, and issues | [GitHub](#github) |
+| `linear` | issues and state history | [Linear](#linear) |
+
+The protocol is [docs/PLUGIN_PROTOCOL.md](docs/PLUGIN_PROTOCOL.md). `examples/weeklog-source-todoist` is a Python program that speaks the same protocol. It is an example, not a supported source. Copy `weeklog-source-todoist` onto `PATH` and configure a `todoist` source with a `token`. See [examples/weeklog-source-todoist/README.md](examples/weeklog-source-todoist/README.md).
+
 ```bash
 weeklog sources
 weeklog doctor
 ```
 
-`sources` lists built-ins and plugins after a protocol `describe` check. `doctor` checks paths, permissions, and that each plugin speaks protocol v1. It does not print or resolve secrets. The protocol is specified in [docs/PLUGIN_PROTOCOL.md](docs/PLUGIN_PROTOCOL.md).
+`doctor` checks paths, permissions, and that each plugin speaks protocol v1. It does not print or resolve secrets.
 
-`examples/weeklog-source-todoist` is a small Python program that speaks the same protocol. It is an example, not a supported source. Copy `weeklog-source-todoist` onto `PATH` and configure a `todoist` source with a `token`. See [examples/weeklog-source-todoist/README.md](examples/weeklog-source-todoist/README.md).
+## Git
+
+`git` collects commits from repositories under `roots`. init sets `roots` to `["~/Projects"]` and `authors` to `git config --global user.email` when that value has no spaces. Each root is scanned through three directory levels. `authors` matches author emails or names. When `authors` is omitted, collect uses `identity.emails`.
+
+The collector runs `git log`. It does not contact the remote. A remote URL is stored as `host/owner/name`.
+
+```bash
+weeklog collect --source git
+```
+
+## Claude Code
+
+`claude-code` reads `$CLAUDE_CONFIG_DIR/projects`, or `~/.claude/projects` when that variable is unset. Use Claude Code at least once so it writes a session. No token is required. The source table accepts no keys besides `type`.
+
+The on-disk format is not a public schema. The parser keeps the fields it understands and skips lines it does not. Sub-agent files fold into the parent session.
+
+```bash
+weeklog collect --source claude-code
+```
 
 ## Codex
 
@@ -473,6 +480,8 @@ Secrets are removed from event text before it is written to SQLite. That include
 go test ./...
 go vet ./...
 ```
+
+The end-to-end test builds the binary and runs `init`, `collect`, and `week --md` against a fixture home. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
