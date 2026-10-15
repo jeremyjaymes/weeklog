@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded pull request runs. Pushes to main are left running.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
     name: build-test-lint
@@ -16,23 +21,47 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    # macOS hosted runners are sometimes never assigned or cancelled during
+    # shortages. On pull requests that leg is best-effort, so a failed macOS
+    # job does not fail the workflow. Pushes to main still require macOS.
+    # continue-on-error does not apply when GitHub cancels the job before a
+    # runner picks it up; re-run the workflow in that case.
+    continue-on-error: ${{ matrix.os == 'macos-latest' && github.event_name == 'pull_request' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.27.2"
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Check go.mod is tidy
+        run: go mod tidy -diff
 
       - name: Build
         run: go build ./...
 
       - name: Test
+        if: runner.os != 'Linux'
         run: go test -skip '^TestFixtureHomeE2E$' ./...
 
+      - name: Test with race detector
+        if: runner.os == 'Linux'
+        run: go test -race -covermode=atomic -coverprofile=cover.out -skip '^TestFixtureHomeE2E$' ./...
+
       - name: E2E
+        if: runner.os != 'Linux'
         run: go test -count=1 -timeout 10m ./cmd/weeklog -run '^TestFixtureHomeE2E$'
+
+      - name: E2E with race detector
+        if: runner.os == 'Linux'
+        run: go test -race -count=1 -timeout 10m ./cmd/weeklog -run '^TestFixtureHomeE2E$'
 
       - name: Vet
         run: go vet ./...
@@ -42,9 +71,20 @@ jobs:
         with:
           version: v2.14.0
 
+      - name: GoReleaser snapshot
+        if: runner.os == 'Linux'
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --clean --skip=publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   example-todoist:
     name: example-python-plugin
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -52,7 +92,9 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.27.2"
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Check Python
         run: python3 --version

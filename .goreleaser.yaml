@@ -3,10 +3,6 @@ version: 2
 
 project_name: weeklog
 
-before:
-  hooks:
-    - go mod tidy
-
 builds:
   - main: ./cmd/weeklog
     binary: weeklog
@@ -16,19 +12,17 @@ builds:
       - -trimpath
     ldflags:
       - -s -w -X main.version={{.Version}}
+    # v0.1.0 ships Linux and macOS only. Windows path and plugin-permission
+    # code is untested, and CI does not run windows-latest.
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
 
 archives:
   - formats: [tar.gz]
-    format_overrides:
-      - goos: windows
-        formats: [zip]
 
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
