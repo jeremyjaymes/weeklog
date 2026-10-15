@@ -45,8 +45,15 @@ piped. --json writes the same report as JSON. Pass only one of --md and
 --json. --plain cannot be combined with --json.
 
 On a terminal, standard output is a boxed recap: one bar per day, a colored
-lane for each source, and the top repositories and pull requests. The
-Markdown report is printed instead when stdout is not a terminal, when
+lane for each source, the session chain, and the top repositories and pull
+requests. The chain reads like git log --graph: an AI session (Claude or
+Codex), the commits it produced, and the linked pull request or issue. The
+linker's reason is dimmed. A hard link uses * and |. A soft link uses o and :.
+Chains that do not fit collapse to a "+N more" row. --no-graph hides the
+chain. With color off, the plain recap draws the same chain and the same
+marks, with no ANSI.
+
+The Markdown report is printed instead when stdout is not a terminal, when
 NO_COLOR is set, or when --plain or --md is set. Pipes keep that Markdown.
 
 With --out FILE, the report is written to FILE. "-" writes to standard
@@ -68,6 +75,7 @@ Run weeklog collect first so the week has events to render.`,
 		Example: `  weeklog week
   weeklog week --week 2026-W41
   weeklog week --plain
+  weeklog week --no-graph
   weeklog week --json
   weeklog week --out ~/journal/weeklog/2026-W41.md`,
 		Args:         cobra.NoArgs,
@@ -79,6 +87,7 @@ Run weeklog collect first so the week has events to render.`,
 	cmd.Flags().String("until", "", "window end, exclusive (RFC3339 or YYYY-MM-DD)")
 	cmd.Flags().Bool("md", false, "write Markdown (the default for a pipe or a file)")
 	cmd.Flags().Bool("plain", false, "print Markdown even when stdout is a terminal")
+	cmd.Flags().Bool("no-graph", false, "hide the session chain in the recap")
 	cmd.Flags().Bool("json", false, "write JSON")
 	cmd.Flags().String("out", "", "write to this file instead of output.dir or standard output")
 	cmd.Flags().String("db", "", "SQLite database (default is the weeklog data directory)")
@@ -95,6 +104,10 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	plain, err := cmd.Flags().GetBool("plain")
+	if err != nil {
+		return err
+	}
+	noGraph, err := cmd.Flags().GetBool("no-graph")
 	if err != nil {
 		return err
 	}
@@ -214,7 +227,7 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 			if _, err := out.Write(body); err != nil {
 				return err
 			}
-		} else if err := printWeekReport(out, ctx, st, rep, loc, plain, md, templatePath); err != nil {
+		} else if err := printWeekReport(out, ctx, st, rep, loc, plain, md, noGraph, templatePath); err != nil {
 			return err
 		}
 	}
@@ -230,13 +243,20 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	}
 }
 
-func printWeekReport(out io.Writer, ctx context.Context, st *store.Store, rep report.Report, loc *time.Location, plain, md bool, templatePath string) error {
+func printWeekReport(out io.Writer, ctx context.Context, st *store.Store, rep report.Report, loc *time.Location, plain, md, noGraph bool, templatePath string) error {
 	if styledRecap(out, plain, md, templatePath) {
 		events, err := st.ListEvents(ctx)
 		if err != nil {
 			return err
 		}
-		body := report.RenderRecap(report.BuildRecap(rep, events, loc), report.RenderOptions{
+		var items []store.WorkItem
+		if !noGraph {
+			items, err = st.ListWorkItems(ctx)
+			if err != nil {
+				return err
+			}
+		}
+		body := report.RenderRecap(report.BuildRecap(rep, events, items, loc), report.RenderOptions{
 			Width: terminalWidth(out),
 			Color: true,
 		})

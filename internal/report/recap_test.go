@@ -45,6 +45,14 @@ func TestRecapGolden(t *testing.T) {
 		"open",
 		"█",
 		"·",
+		"Session chain",
+		"* Claude · Admin gate",
+		"| ref:GEN-341 in prompt",
+		"aaaaaaa",
+		"bbbbbbb",
+		"#5",
+		"GEN-341",
+		"ref:GEN-341 ticket",
 	} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("plain recap missing %q\n%s", want, plain)
@@ -73,8 +81,11 @@ func TestPlainReportGolden(t *testing.T) {
 func TestRecapExtensionSlots(t *testing.T) {
 	recap := goldenRecap(t)
 	plain := RenderRecap(recap, RenderOptions{Color: false})
-	if strings.Contains(plain, "vs last week") || strings.Contains(plain, "sess-1") {
-		t.Fatalf("empty slots were drawn\n%s", plain)
+	if strings.Contains(plain, "vs last week") {
+		t.Fatalf("delta slot was drawn\n%s", plain)
+	}
+	if !strings.Contains(plain, "Session chain") || !strings.Contains(plain, "ref:GEN-341 in prompt") {
+		t.Fatalf("linker graph missing from the plain recap\n%s", plain)
 	}
 
 	recap = recap.WithDelta(Delta{Line: "↑ 1 PR merged vs last week"}).WithGraph(Graph{
@@ -170,7 +181,7 @@ func TestRecapIgnoresOutsideWindowAndUnknownSource(t *testing.T) {
 		Since:   since.UTC(),
 		Until:   until.UTC(),
 	}
-	recap := BuildRecap(rep, events, loc)
+	recap := BuildRecap(rep, events, nil, loc)
 	if len(recap.Days) != 7 || recap.Days[6].Count != 1 || recap.Days[6].Label != "Sun" {
 		t.Fatalf("days = %+v", recap.Days)
 	}
@@ -201,7 +212,7 @@ func TestLongWindowCollapsesDays(t *testing.T) {
 		}},
 	}
 	rep := Report{Heading: "Week Jan 1 – Jan 30", Since: since, Until: until}
-	recap := BuildRecap(rep, events, time.UTC)
+	recap := BuildRecap(rep, events, nil, time.UTC)
 	if len(recap.Days) != 30 || recap.Days[3].Count != 1 || recap.Days[20].Count != 1 {
 		t.Fatalf("days = %d", len(recap.Days))
 	}
@@ -222,11 +233,14 @@ func TestEmptyRecap(t *testing.T) {
 		Until:   since.AddDate(0, 0, 7),
 		Summary: Summary{Line: "**Shipped 0 · In progress 0 · Explored 0** · ~0m agent time · 0 commits · 0 PRs merged"},
 	}
-	plain := RenderRecap(BuildRecap(rep, nil, time.UTC), RenderOptions{Color: false})
+	plain := RenderRecap(BuildRecap(rep, nil, nil, time.UTC), RenderOptions{Color: false})
 	for _, want := range []string{"No source activity", "No repositories", "No pull requests", "Shipped 0"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("missing %q\n%s", want, plain)
 		}
+	}
+	if strings.Contains(plain, "Session chain") {
+		t.Fatalf("empty week drew a chain\n%s", plain)
 	}
 }
 
@@ -239,7 +253,11 @@ func goldenRecap(t *testing.T) Recap {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return BuildRecap(rep, events, time.UTC)
+	items, err := st.ListWorkItems(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return BuildRecap(rep, events, items, time.UTC)
 }
 
 func stripANSI(s string) string {

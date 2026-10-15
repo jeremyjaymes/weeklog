@@ -24,7 +24,7 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}
@@ -598,6 +598,114 @@ week_starts = "monday"
 
 func quoteTOML(path string) string {
 	return `"` + strings.ReplaceAll(path, `\`, `\\`) + `"`
+}
+
+func TestWeekRecapShowsGraph(t *testing.T) {
+	setTerminal(t, true)
+	home := isolatePlugins(t)
+	cfgPath := writeWeekConfig(t, home, "")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedGraphWeekDB(t, dbPath)
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("week: %v\n%s\n%s", err, stdout, stderr)
+	}
+	plain := stripANSI(stdout)
+	for _, want := range []string{"Session chain", "* Claude", "aaaaaaa", "#8", "ref:GEN-1 in prompt", "o Codex", "files overlap: 1"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("recap missing %q\n%s", want, plain)
+		}
+	}
+	if !strings.Contains(stdout, "\x1b[2") {
+		t.Fatalf("reason was not dimmed\n%s", stdout)
+	}
+
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--no-graph")
+	if err != nil {
+		t.Fatalf("no-graph: %v\n%s", err, stderr)
+	}
+	hidden := stripANSI(stdout)
+	if strings.Contains(hidden, "Session chain") || strings.Contains(hidden, "o Codex") || strings.Contains(hidden, "files overlap: 1") {
+		t.Fatalf("--no-graph still drew the chain\n%s", hidden)
+	}
+	if !strings.Contains(stdout, "╭") || !strings.Contains(stripANSI(stdout), "Sources") {
+		t.Fatalf("--no-graph dropped the recap\n%s", stdout)
+	}
+
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--plain")
+	if err != nil {
+		t.Fatalf("plain: %v\n%s", err, stderr)
+	}
+	if strings.Contains(stdout, "Session chain") || strings.Contains(stdout, "\x1b") || !strings.Contains(stdout, "# Week 2026-W41") {
+		t.Fatalf("plain = %s", stdout)
+	}
+}
+
+func seedGraphWeekDB(t *testing.T, path string) {
+	t.Helper()
+	st, err := store.Open(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	}()
+	shaA := strings.Repeat("a", 40)
+	shaB := strings.Repeat("b", 40)
+	res, err := st.UpsertEvents(context.Background(), []event.Event{
+		{
+			Source: "claude-code", SourceID: "sess-1", Kind: event.KindAgentSession,
+			TS: time.Date(2026, 10, 8, 14, 0, 0, 0, time.UTC), Title: "Admin gate",
+			Repo: "github.com/acme/app",
+		},
+		{
+			Source: "git", SourceID: shaA, Kind: event.KindCommit,
+			TS: time.Date(2026, 10, 8, 14, 30, 0, 0, time.UTC), Title: "Add the gate",
+			Repo: "github.com/acme/app",
+		},
+		{
+			Source: "github", SourceID: "acme/app#8", Kind: event.KindPR,
+			TS: time.Date(2026, 10, 8, 16, 0, 0, 0, time.UTC), Title: "Add the gate",
+			State: event.StateMerged, URL: "https://github.com/acme/app/pull/8",
+			Repo: "github.com/acme/app",
+		},
+		{
+			Source: "codex", SourceID: "roll-1", Kind: event.KindAgentSession,
+			TS: time.Date(2026, 10, 9, 10, 0, 0, 0, time.UTC), Title: "Spike",
+			Repo: "github.com/acme/otto",
+		},
+		{
+			Source: "git", SourceID: shaB, Kind: event.KindCommit,
+			TS: time.Date(2026, 10, 9, 11, 0, 0, 0, time.UTC), Title: "Try the spike",
+			Repo: "github.com/acme/otto",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = st.ReplaceWorkItems(context.Background(), []store.WorkItemDraft{
+		{
+			Title: "Add the gate",
+			Events: []store.WorkItemLink{
+				{EventID: res.IDs[0], Reason: "ref:GEN-1 in prompt"},
+				{EventID: res.IDs[1], Reason: "ref:GEN-1 in commit message"},
+				{EventID: res.IDs[2], Reason: "ref:GEN-1 in title"},
+			},
+		},
+		{
+			Title: "Spike",
+			Events: []store.WorkItemLink{
+				{EventID: res.IDs[3], Reason: "files overlap: 1"},
+				{EventID: res.IDs[4], Reason: "files overlap: 1"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func seedWeekDB(t *testing.T, path string) {
