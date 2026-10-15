@@ -6,13 +6,14 @@ import (
 )
 
 // LoopbackEndpoint returns config["endpoint"] when it is an http URL on the
-// loopback interface. The key is not part of any built-in describe schema, and
-// weeklog config check rejects it in a user's TOML file. Collectors honor it
-// so a test can serve recorded HTTP responses to the in-process source and to
-// the same source running through the subprocess adapter.
+// loopback interface. The key is not part of any built-in describe schema.
+// config check accepts it only for github and linear, and only for this
+// loopback form, so a test can put a recorded-response server in the config
+// the real binary loads. Any other value is a config error there.
 //
-// Any other value is ignored. The plugin environment does not carry arbitrary
-// variables, and the collect request is the only channel both paths share.
+// Collectors ignore a value this function rejects. The plugin environment
+// does not carry arbitrary variables, and the collect request is the only
+// channel both the in-process source and the subprocess adapter share.
 // Restricting the override to loopback http keeps a config value from sending
 // a token to another host.
 func LoopbackEndpoint(config map[string]any) (string, bool) {

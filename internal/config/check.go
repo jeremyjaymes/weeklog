@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+
+	"github.com/jeremyjaymes/weeklog/internal/source"
 )
 
 // Severity is the level of a config check finding.
@@ -408,12 +410,28 @@ func validateBuiltinFields(index int, canonical string, schema sourceSchema, src
 	}
 	sort.Strings(unknown)
 	for _, key := range unknown {
-		issues = append(issues, errIssue(
-			fmt.Sprintf("source[%d].%s", index, key),
-			"unknown field for "+canonical,
-		))
+		field := fmt.Sprintf("source[%d].%s", index, key)
+		if loopbackEndpoint(canonical, key, src.Settings[key]) {
+			continue
+		}
+		if key == "endpoint" && (canonical == "github" || canonical == "linear") {
+			issues = append(issues, errIssue(field, "must be an http URL on 127.0.0.1, localhost, or ::1"))
+			continue
+		}
+		issues = append(issues, errIssue(field, "unknown field for "+canonical))
 	}
 	return issues
+}
+
+// loopbackEndpoint reports whether key is the github or linear test override
+// and value is an http URL on the loopback interface. The key is not part of
+// the describe schema. Collect honors the same shape and ignores anything else.
+func loopbackEndpoint(canonical, key string, value any) bool {
+	if key != "endpoint" || (canonical != "github" && canonical != "linear") {
+		return false
+	}
+	_, ok := source.LoopbackEndpoint(map[string]any{"endpoint": value})
+	return ok
 }
 
 func validateExternalSecrets(index int, src *Source) []Issue {

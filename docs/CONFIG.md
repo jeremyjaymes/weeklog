@@ -86,10 +86,10 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 | `git` | `roots` (array of paths, required), `authors` (array of strings). Each root is scanned for repositories through three directory levels. `authors` matches author emails or names; when omitted, `identity.emails` is used. |
 | `claude-code` | none. Reads `$CLAUDE_CONFIG_DIR/projects` when that variable is set, and `~/.claude/projects` otherwise. |
 | `codex` | none. Reads `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl` when that variable is set, and `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` otherwise. |
-| `github` | `token` (secret, optional). When it is unset, collect runs `gh auth token`. |
-| `linear` | `token` (secret, required), `ticket_pattern` (regular expression). Collect reads issues assigned to or created by the API key's user that changed in the window, and their state history. Keys that match `ticket_pattern` are stored on `refs`. When the pattern is omitted, the built-in ticket shape is used. |
+| `github` | `token` (secret, optional). When it is unset, collect runs `gh auth token`. `endpoint` is accepted only when it is an http URL on 127.0.0.1, localhost, or ::1. |
+| `linear` | `token` (secret, required), `ticket_pattern` (regular expression), and the same loopback `endpoint`. Collect reads issues assigned to or created by the API key's user that changed in the window, and their state history. Keys that match `ticket_pattern` are stored on `refs`. When the pattern is omitted, the built-in ticket shape is used. |
 
-Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).
+Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. `endpoint` on `github` and `linear` is the exception: tests use it to replay recorded HTTP responses against the real binary, and any value that is not loopback http is an error. It is not a setting for the public APIs. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).
 
 Path fields (`output.dir`, `output.template`, and `roots`) expand a leading `~`. `~user` paths are not supported.
 
