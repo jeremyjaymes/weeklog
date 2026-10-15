@@ -52,6 +52,7 @@ func (s *Source) Collect(ctx context.Context, req source.CollectRequest, emit fu
 	if err := ctx.Err(); err != nil {
 		return source.Result{}, err
 	}
+	s = s.withLoopback(req.Config)
 	since, until, err := collectionWindow(req)
 	if err != nil {
 		return source.Result{}, err
