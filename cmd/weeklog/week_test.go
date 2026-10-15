@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -20,7 +21,7 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}
@@ -61,6 +62,72 @@ func TestWeekMarkdownAndJSON(t *testing.T) {
 	_, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--md", "--json")
 	if err == nil || !strings.Contains(err.Error(), "pass either --md or --json") {
 		t.Fatalf("err = %v\n%s", err, stderr)
+	}
+	_, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--plain", "--json")
+	if err == nil || !strings.Contains(err.Error(), "pass either --plain or --json") {
+		t.Fatalf("err = %v\n%s", err, stderr)
+	}
+}
+
+func TestWeekPlainMatchesMarkdown(t *testing.T) {
+	home := isolatePlugins(t)
+	cfgPath := writeWeekConfig(t, home, "")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("week: %v\n%s\n%s", err, stdout, stderr)
+	}
+	plain, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--plain")
+	if err != nil {
+		t.Fatalf("plain: %v\n%s\n%s", err, plain, stderr)
+	}
+	if plain != stdout {
+		t.Fatalf("plain stdout differs from the default pipe\n--- plain ---\n%s\n--- default ---\n%s", plain, stdout)
+	}
+	if !strings.Contains(plain, "# Week 2026-W41 (Oct 5 – Oct 11)") || strings.Contains(plain, "\x1b") {
+		t.Fatalf("plain = %s", plain)
+	}
+
+	t.Setenv("NO_COLOR", "1")
+	noColor, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("no color: %v\n%s", err, stderr)
+	}
+	if noColor != stdout || strings.Contains(noColor, "\x1b") {
+		t.Fatalf("NO_COLOR stdout = %s", noColor)
+	}
+}
+
+func TestStyledRecapDecision(t *testing.T) {
+	cases := []struct {
+		name     string
+		plain    bool
+		md       bool
+		template string
+		noColor  string
+		term     bool
+		want     bool
+	}{
+		{name: "terminal", term: true, want: true},
+		{name: "pipe", term: false, want: false},
+		{name: "plain flag", term: true, plain: true, want: false},
+		{name: "md flag", term: true, md: true, want: false},
+		{name: "no color", term: true, noColor: "1", want: false},
+		{name: "empty no color", term: true, noColor: "", want: true},
+		{name: "template", term: true, template: "custom.tmpl", want: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := wantStyledRecap(tc.plain, tc.md, tc.template, tc.noColor, tc.term)
+			if got != tc.want {
+				t.Fatalf("styled = %v, want %v", got, tc.want)
+			}
+		})
+	}
+	if isTerminal(bytes.NewBuffer(nil)) {
+		t.Fatal("a buffer was treated as a terminal")
 	}
 }
 

@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/x/term"
+	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 
 	"github.com/jeremyjaymes/weeklog/internal/config"
@@ -34,8 +38,14 @@ issues, and unknown events are summarized under Other activity. Time is the
 sum of agent-session durations, labeled as an estimate. An item with no
 session uses 15 minutes for each cluster of commits.
 
---md writes Markdown, which is the default. --json writes the same report as
-JSON. Pass only one of them.
+--md writes Markdown, which is the default when the report is saved or
+piped. --json writes the same report as JSON. Pass only one of --md and
+--json. --plain cannot be combined with --json.
+
+On a terminal, standard output is a boxed recap: one bar per day, a colored
+lane for each source, and the top repositories and pull requests. The
+Markdown report is printed instead when stdout is not a terminal, when
+NO_COLOR is set, or when --plain or --md is set. Pipes keep that Markdown.
 
 With --out FILE, the report is written to FILE. "-" writes to standard
 output. Without --out, a configured output.dir receives <week>.md (or .json).
@@ -49,6 +59,7 @@ The database is the same file weeklog collect uses. --db selects another file.
 Run weeklog collect first so the week has events to render.`,
 		Example: `  weeklog week
   weeklog week --week 2026-W41
+  weeklog week --plain
   weeklog week --json
   weeklog week --out ~/journal/weeklog/2026-W41.md`,
 		Args:         cobra.NoArgs,
@@ -58,7 +69,8 @@ Run weeklog collect first so the week has events to render.`,
 	cmd.Flags().String("week", "", "ISO week to render (YYYY-Www)")
 	cmd.Flags().String("since", "", "window start (RFC3339 or YYYY-MM-DD)")
 	cmd.Flags().String("until", "", "window end, exclusive (RFC3339 or YYYY-MM-DD)")
-	cmd.Flags().Bool("md", false, "write Markdown (the default)")
+	cmd.Flags().Bool("md", false, "write Markdown (the default for a pipe or a file)")
+	cmd.Flags().Bool("plain", false, "print Markdown even when stdout is a terminal")
 	cmd.Flags().Bool("json", false, "write JSON")
 	cmd.Flags().String("out", "", "write to this file instead of output.dir or standard output")
 	cmd.Flags().String("db", "", "SQLite database (default is the weeklog data directory)")
@@ -74,8 +86,15 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	plain, err := cmd.Flags().GetBool("plain")
+	if err != nil {
+		return err
+	}
 	if md && asJSON {
 		return errors.New("pass either --md or --json")
+	}
+	if plain && asJSON {
+		return errors.New("pass either --plain or --json")
 	}
 	flag, err := cmd.Root().PersistentFlags().GetString("config")
 	if err != nil {
@@ -175,11 +194,24 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	if toStdout {
+		out := cmd.OutOrStdout()
+		if styledRecap(out, plain, md, templatePath) {
+			events, err := st.ListEvents(ctx)
+			if err != nil {
+				return err
+			}
+			body := report.RenderRecap(report.BuildRecap(rep, events, loc), report.RenderOptions{
+				Width: terminalWidth(out),
+				Color: true,
+			})
+			_, err = fmt.Fprint(out, body)
+			return err
+		}
 		body, err := report.Markdown(rep, templatePath)
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Fprint(cmd.OutOrStdout(), body)
+		_, err = fmt.Fprint(out, body)
 		return err
 	}
 	if err := report.WriteMarkdown(dest, templatePath, rep); err != nil {
@@ -234,4 +266,49 @@ func reportTemplate(cfg *config.Config) (string, error) {
 		return path, nil
 	}
 	return filepath.Join(cfg.Dir, path), nil
+}
+
+// styledRecap reports whether stdout should be the colored recap.
+// A pipe, NO_COLOR, --plain, --md, and a custom template keep the Markdown
+// report so that text stays stable for anything that reads it.
+func styledRecap(w io.Writer, plain, md bool, templatePath string) bool {
+	return wantStyledRecap(plain, md, templatePath, os.Getenv("NO_COLOR"), isTerminal(w))
+}
+
+func wantStyledRecap(plain, md bool, templatePath, noColor string, term bool) bool {
+	if plain || md || strings.TrimSpace(templatePath) != "" {
+		return false
+	}
+	if noColor != "" || !term {
+		return false
+	}
+	return true
+}
+
+func isTerminal(w io.Writer) bool {
+	f, ok := w.(interface{ Fd() uintptr })
+	if !ok {
+		return false
+	}
+	return isatty.IsTerminal(f.Fd())
+}
+
+func terminalWidth(w io.Writer) int {
+	f, ok := w.(interface{ Fd() uintptr })
+	if !ok {
+		return report.DefaultRecapWidth
+	}
+	width, _, err := term.GetSize(f.Fd())
+	if err != nil || width <= 0 {
+		return report.DefaultRecapWidth
+	}
+	// The border takes one column on each side of the lipgloss width.
+	inner := width - 2
+	if inner < 48 {
+		return 48
+	}
+	if inner > 100 {
+		return 100
+	}
+	return inner
 }
