@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/jeremyjaymes/weeklog/internal/source"
 )
 
 const (
@@ -136,6 +138,23 @@ func (s *Source) endpointURL() string {
 		return s.endpoint
 	}
 	return defaultEndpoint
+}
+
+// withLoopback returns s, or a copy whose GraphQL URL is a loopback endpoint
+// from config. An endpoint already set on s wins, so unit tests that point
+// the field at a fixture server keep that URL. The copy leaves the caller
+// unchanged.
+func (s *Source) withLoopback(config map[string]any) *Source {
+	if s == nil || s.endpoint != "" {
+		return s
+	}
+	endpoint, ok := source.LoopbackEndpoint(config)
+	if !ok {
+		return s
+	}
+	cp := *s
+	cp.endpoint = endpoint
+	return &cp
 }
 
 func (s *Source) httpClient() *http.Client {

@@ -52,6 +52,38 @@ func TestDefaultPatternMatchesLinker(t *testing.T) {
 	}
 }
 
+func TestCollectUsesLoopbackConfigEndpoint(t *testing.T) {
+	const token = "fixture-token"
+	srv, gotReqs := newFixtureServer(t)
+	src := New()
+	req := request(token, `GEN-\d+`)
+	req.Config["endpoint"] = srv.URL
+	events, result, err := collect(src, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFixtureEvents(t, events)
+	if result.Events != len(events) || len(gotReqs()) == 0 {
+		t.Fatalf("events=%d requests=%d", len(events), len(gotReqs()))
+	}
+}
+
+func TestFieldEndpointWinsOverConfig(t *testing.T) {
+	srv, gotReqs := newFixtureServer(t)
+	src := New()
+	src.endpoint = srv.URL
+	req := request("fixture-token", `GEN-\d+`)
+	req.Config["endpoint"] = "http://example.com/graphql"
+	events, _, err := collect(src, req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFixtureEvents(t, events)
+	if len(gotReqs()) == 0 {
+		t.Fatal("field endpoint was not requested")
+	}
+}
+
 func TestCollectRecordedFixtures(t *testing.T) {
 	const token = "fixture-token"
 	srv, gotReqs := newFixtureServer(t)

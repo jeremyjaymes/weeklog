@@ -6,4 +6,9 @@
 // selects the ticket keys stored on each event. When it is omitted, the
 // built-in ticket shape is used. The source does not keep a cursor. Tests
 // replay recorded responses and do not call Linear.
+//
+// Collect reads config key "endpoint" only when the value is an http URL on
+// 127.0.0.1, localhost, or ::1. The key is not part of the describe schema.
+// It exists so the in-process collector and the subprocess adapter can share
+// one local fixture server. Any other value is ignored.
 package linear
