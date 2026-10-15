@@ -29,6 +29,7 @@ week_starts = "monday"       # sunday through saturday; default monday
 
 [output]
 dir = "~/journal/weeklog" # leading ~ is expanded; empty warns at check time
+mode = "both"             # both, file, or terminal
 template = ""             # empty uses the built-in template
 
 [redaction]
@@ -74,7 +75,8 @@ token = "cmd:op read op://dev/basecamp/token"
 
 | Key | Required | Notes |
 |---|---|---|
-| `dir` | no | Directory for weekly Markdown. A leading `~` is expanded. Unset is a warning. `weeklog week` writes `<dir>/<week>.md` here when `--out` is omitted. |
+| `dir` | no | Directory for weekly Markdown. A leading `~` is expanded. Unset is a warning. Used when `--out` is omitted and `mode` is `both` or `file`. |
+| `mode` | no | `both`, `file`, or `terminal`. Default `both`. `both` writes `<dir>/<week>.md` and, when stdout is a terminal and `--out` is omitted, also prints the recap and a dim line such as `saved ~/…/2026-W42.md`. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore this setting. A pipe, `NO_COLOR`, and `--plain` still print Markdown. Without `dir`, the report is printed. |
 | `template` | no | Path to a Go `text/template`. Empty selects the built-in template. A leading `~` is expanded. A relative path is resolved from the config file's directory. |
 
 ### Sources
@@ -142,7 +144,7 @@ weeklog config check --config ~/.config/weeklog/config.toml
 | GitHub | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token. The file sets `token = "cmd:gh auth token"`. The token value is not written or printed. |
 | git | `~/Projects` contains at least one repository within three directory levels, the same depth the git source scans. `roots` is `["~/Projects"]`. |
 
-`identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`.
+`identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`. `output.mode` is `both`. The file comments the three modes: `both` writes the weekly file and prints the recap, `file` writes only, and `terminal` prints only.
 
 Sources that are not found are omitted. `weeklog config check` accepts the file. A literal token is not written.
 

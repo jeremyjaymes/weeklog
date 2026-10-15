@@ -39,10 +39,22 @@ type Identity struct {
 	WeekStarts string
 }
 
+const (
+	// OutputModeBoth writes the weekly file and, when stdout is a terminal,
+	// also prints the report. It is the default.
+	OutputModeBoth = "both"
+	// OutputModeFile writes the weekly file and does not print the report.
+	OutputModeFile = "file"
+	// OutputModeTerminal prints the report and does not write a file.
+	OutputModeTerminal = "terminal"
+)
+
 // Output controls where weekly logs are written.
 type Output struct {
 	Dir      string
 	Template string
+	// Mode is both, file, or terminal. Empty means both.
+	Mode string
 }
 
 // Redaction lists extra redaction patterns and allow-list exceptions.
@@ -203,6 +215,10 @@ func decodeOutput(m map[string]any) (Output, []string, error) {
 	if err != nil {
 		return Output{}, nil, fmt.Errorf("output.template: %w", err)
 	}
+	mode, err := takeString(m, "mode")
+	if err != nil {
+		return Output{}, nil, fmt.Errorf("output.mode: %w", err)
+	}
 	dir, err = cleanPath(dir)
 	if err != nil {
 		return Output{}, nil, fmt.Errorf("output.dir: %w", err)
@@ -211,7 +227,22 @@ func decodeOutput(m map[string]any) (Output, []string, error) {
 	if err != nil {
 		return Output{}, nil, fmt.Errorf("output.template: %w", err)
 	}
-	return Output{Dir: dir, Template: template}, leftoverKeys("output", m), nil
+	return Output{Dir: dir, Template: template, Mode: strings.ToLower(strings.TrimSpace(mode))}, leftoverKeys("output", m), nil
+}
+
+// ResolvedMode returns both, file, or terminal.
+// An empty Mode means both. Any other value is an error.
+func (o Output) ResolvedMode() (string, error) {
+	mode := strings.ToLower(strings.TrimSpace(o.Mode))
+	if mode == "" {
+		return OutputModeBoth, nil
+	}
+	switch mode {
+	case OutputModeBoth, OutputModeFile, OutputModeTerminal:
+		return mode, nil
+	default:
+		return "", fmt.Errorf("invalid output.mode %s (use both, file, or terminal)", quoteUser(o.Mode))
+	}
 }
 
 func decodeRedaction(m map[string]any) (Redaction, []string, error) {

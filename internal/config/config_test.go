@@ -74,6 +74,10 @@ token = "cmd:op read op://dev/basecamp/token"
 	if cfg.Output.Template != "" {
 		t.Fatalf("template = %q", cfg.Output.Template)
 	}
+	mode, err := cfg.Output.ResolvedMode()
+	if err != nil || mode != OutputModeBoth {
+		t.Fatalf("mode = %q, %v", mode, err)
+	}
 	if len(cfg.Sources) != 6 {
 		t.Fatalf("sources = %d", len(cfg.Sources))
 	}
@@ -103,6 +107,55 @@ token = "cmd:op read op://dev/basecamp/token"
 	}
 	if cfg.Sources[5].Settings["token"] != "cmd:op read op://dev/basecamp/token" {
 		t.Fatalf("basecamp token = %#v", cfg.Sources[5].Settings["token"])
+	}
+}
+
+func TestOutputMode(t *testing.T) {
+	cases := []struct {
+		name string
+		toml string
+		want string
+	}{
+		{name: "empty", toml: "[output]\ndir = \"/tmp/weeklog-out\"\n", want: OutputModeBoth},
+		{name: "both", toml: "[output]\nmode = \"both\"\n", want: OutputModeBoth},
+		{name: "file", toml: "[output]\nmode = \"file\"\n", want: OutputModeFile},
+		{name: "terminal", toml: "[output]\nmode = \"terminal\"\n", want: OutputModeTerminal},
+		{name: "mixed case", toml: "[output]\nmode = \"File\"\n", want: OutputModeFile},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := Load(writeConfig(t, tc.toml))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := cfg.Output.ResolvedMode()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Fatalf("mode = %q, want %q", got, tc.want)
+			}
+		})
+	}
+
+	cfg, err := Load(writeConfig(t, "[output]\nmode = \"desktop\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cfg.Output.ResolvedMode(); err == nil || !strings.Contains(err.Error(), "output.mode") {
+		t.Fatalf("err = %v", err)
+	}
+	path := writeConfig(t, "[output]\nmode = 1\n")
+	if _, err := Load(path); err == nil || !strings.Contains(err.Error(), "output.mode") {
+		t.Fatalf("err = %v", err)
+	}
+
+	checked, err := Check(context.Background(), writeConfig(t, "[output]\ndir = \"/tmp/weeklog-out\"\nmode = \"file\"\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !checked.OK() || !strings.Contains(checked.Report(), "output.mode: file\n") {
+		t.Fatal(checked.Report())
 	}
 }
 
@@ -362,6 +415,7 @@ token = "env:WEEKLOG_TEST_SECRET"
 		"identity.github: jeremyjaymes\n" +
 		"identity.emails: a@example.com, b@example.com\n" +
 		"output.dir: " + filepath.Join(home, "journal", "weeklog") + "\n" +
+		"output.mode: both\n" +
 		"output.template: built-in\n" +
 		"redaction.extra_patterns: 1\n" +
 		"redaction.allow: 1\n" +
@@ -584,6 +638,16 @@ type = "not a type"
 				"invalid source type",
 				"output.dir: is unset",
 			},
+		},
+		{
+			name: "bad output mode",
+			toml: `
+[output]
+dir = "/tmp/weeklog-out"
+mode = "desktop"
+`,
+			ok:   false,
+			want: []string{`invalid output.mode "desktop"`, "error: output.mode:"},
 		},
 		{
 			name: "no sources",

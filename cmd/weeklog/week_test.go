@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jeremyjaymes/weeklog/internal/config"
 	"github.com/jeremyjaymes/weeklog/internal/event"
 	"github.com/jeremyjaymes/weeklog/internal/report"
 	"github.com/jeremyjaymes/weeklog/internal/store"
@@ -21,7 +24,7 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}
@@ -268,15 +271,323 @@ func TestWeekRejectsBadWindow(t *testing.T) {
 	}
 }
 
+func TestPlanWeekOutput(t *testing.T) {
+	const (
+		dir  = "/journal"
+		base = "2026-W42"
+		ext  = ".md"
+	)
+	file := filepath.Join(dir, base+ext)
+	cases := []struct {
+		name   string
+		out    string
+		dir    string
+		mode   string
+		ext    string
+		term   bool
+		asJSON bool
+		want   weekPlan
+	}{
+		{name: "out file", out: "/tmp/one.md", dir: dir, mode: config.OutputModeTerminal, term: true, want: weekPlan{path: "/tmp/one.md", status: statusWrote}},
+		{name: "out dash", out: "-", dir: dir, mode: config.OutputModeFile, term: true, want: weekPlan{report: true, status: statusNone}},
+		{name: "no dir", mode: config.OutputModeFile, term: true, want: weekPlan{report: true, status: statusNone}},
+		{name: "file", dir: dir, mode: config.OutputModeFile, term: true, want: weekPlan{path: file, status: statusWrote}},
+		{name: "terminal", dir: dir, mode: config.OutputModeTerminal, term: true, want: weekPlan{report: true, status: statusNone}},
+		{name: "both tty", dir: dir, mode: config.OutputModeBoth, term: true, want: weekPlan{path: file, report: true, status: statusSaved}},
+		{name: "both pipe", dir: dir, mode: config.OutputModeBoth, want: weekPlan{path: file, status: statusWrote}},
+		{name: "both json tty", dir: dir, mode: config.OutputModeBoth, ext: ".json", term: true, asJSON: true, want: weekPlan{path: filepath.Join(dir, base+".json"), status: statusWrote}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ext := ext
+			if tc.ext != "" {
+				ext = tc.ext
+			}
+			got, err := planWeekOutput(tc.out, tc.dir, tc.mode, base, ext, tc.term, tc.asJSON)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Fatalf("plan = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+	if _, err := planWeekOutput("", dir, "desktop", base, ext, true, false); err == nil {
+		t.Fatal("expected an invalid mode to fail")
+	}
+}
+
+func TestSavedLine(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	t.Setenv("NO_COLOR", "")
+	nested := filepath.Join(home, "journal", "weeklog", "2026-W42.md")
+	direct := filepath.Join(home, "2026-W42.md")
+	outside := filepath.Join(t.TempDir(), "2026-W42.md")
+	collapsed := filepath.Join("~", "…", "2026-W42.md")
+	if got := shortenSavedPath(nested); got != collapsed {
+		t.Fatalf("nested = %q, want %q", got, collapsed)
+	}
+	if got := shortenSavedPath(direct); got != filepath.Join("~", "2026-W42.md") {
+		t.Fatalf("direct = %q", got)
+	}
+	if got := shortenSavedPath(outside); got != outside {
+		t.Fatalf("outside = %q", got)
+	}
+	plain := formatSavedLine(nested, false)
+	if plain != "saved "+collapsed+"\n" || strings.Contains(plain, "\x1b") {
+		t.Fatalf("plain = %q", plain)
+	}
+	colored := formatSavedLine(nested, true)
+	if !strings.Contains(colored, "\x1b[2m") || stripANSI(colored) != plain {
+		t.Fatalf("colored = %q", colored)
+	}
+	if colorSavedLine(false, true) != true || colorSavedLine(true, true) || colorSavedLine(false, false) {
+		t.Fatal("colorSavedLine")
+	}
+	t.Setenv("NO_COLOR", "1")
+	if colorSavedLine(false, true) {
+		t.Fatal("NO_COLOR enabled color")
+	}
+}
+
+func TestWeekBothPrintsRecapOnTerminal(t *testing.T) {
+	setTerminal(t, true)
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal", "weeklog")
+	cfgPath := writeWeekConfigMode(t, home, dir, "")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("week: %v\n%s\n%s", err, stdout, stderr)
+	}
+	dest := filepath.Join(dir, "2026-W41.md")
+	body, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "# Week 2026-W41 (Oct 5 – Oct 11)") {
+		t.Fatalf("file = %s", body)
+	}
+	if !strings.Contains(stdout, "╭") || !strings.Contains(stdout, "\x1b") {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	wantSaved := "saved " + filepath.Join("~", "…", "2026-W41.md")
+	if !strings.HasSuffix(stripANSI(stdout), wantSaved+"\n") {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	if strings.Contains(stdout, "# Week 2026-W41") {
+		t.Fatalf("terminal recap included the markdown\n%s", stdout)
+	}
+
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--md")
+	if err != nil {
+		t.Fatalf("md: %v\n%s", err, stderr)
+	}
+	if !strings.Contains(stdout, "# Week 2026-W41") || !strings.Contains(stdout, "\x1b[2m") || !strings.HasSuffix(stripANSI(stdout), wantSaved+"\n") {
+		t.Fatalf("md stdout = %q", stdout)
+	}
+}
+
+func TestWeekBothPlainAndNoColorPrintMarkdown(t *testing.T) {
+	setTerminal(t, true)
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfigMode(t, home, dir, "both")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+	saved := "saved " + filepath.Join("~", "…", "2026-W41.md") + "\n"
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--plain")
+	if err != nil {
+		t.Fatalf("plain: %v\n%s\n%s", err, stdout, stderr)
+	}
+	if strings.Contains(stdout, "\x1b") || !strings.Contains(stdout, "# Week 2026-W41") || !strings.HasSuffix(stdout, saved) {
+		t.Fatalf("plain stdout = %q", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "2026-W41.md")); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("NO_COLOR", "1")
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("no color: %v\n%s", err, stderr)
+	}
+	if strings.Contains(stdout, "\x1b") || !strings.Contains(stdout, "# Week 2026-W41") || !strings.HasSuffix(stdout, saved) {
+		t.Fatalf("NO_COLOR stdout = %q", stdout)
+	}
+}
+
+func TestWeekFileModeSkipsRecap(t *testing.T) {
+	setTerminal(t, true)
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfigMode(t, home, dir, "file")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("week: %v\n%s\n%s", err, stdout, stderr)
+	}
+	dest := filepath.Join(dir, "2026-W41.md")
+	if stdout != "wrote "+dest+"\n" {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	if _, err := os.Stat(dest); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestWeekTerminalModeWritesNoFile(t *testing.T) {
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfigMode(t, home, dir, "terminal")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("week: %v\n%s\n%s", err, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "# Week 2026-W41") || strings.Contains(stdout, "saved ") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "2026-W41.md")); !os.IsNotExist(err) {
+		t.Fatalf("terminal mode wrote a file: %v", err)
+	}
+
+	setTerminal(t, true)
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("tty: %v\n%s", err, stderr)
+	}
+	if !strings.Contains(stdout, "╭") || strings.Contains(stdout, "saved ") {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "2026-W41.md")); !os.IsNotExist(err) {
+		t.Fatalf("terminal mode wrote a file on a tty: %v", err)
+	}
+
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--json")
+	if err != nil {
+		t.Fatalf("json: %v\n%s", err, stderr)
+	}
+	if !strings.Contains(stdout, `"week": "2026-W41"`) || strings.Contains(stdout, "saved ") || strings.Contains(stdout, "wrote ") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "2026-W41.json")); !os.IsNotExist(err) {
+		t.Fatalf("terminal mode wrote json: %v", err)
+	}
+}
+
+func TestWeekOutFlagsIgnoreMode(t *testing.T) {
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfigMode(t, home, dir, "terminal")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+	out := filepath.Join(home, "explicit.md")
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--out", out)
+	if err != nil {
+		t.Fatalf("out file: %v\n%s\n%s", err, stdout, stderr)
+	}
+	if stdout != "wrote "+out+"\n" {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	if _, err := os.Stat(out); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "2026-W41.md")); !os.IsNotExist(err) {
+		t.Fatalf("dir file exists: %v", err)
+	}
+
+	cfgPath = writeWeekConfigMode(t, home, dir, "file")
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--out", "-")
+	if err != nil {
+		t.Fatalf("out dash: %v\n%s", err, stderr)
+	}
+	if !strings.Contains(stdout, "# Week 2026-W41") || strings.Contains(stdout, "wrote ") || strings.Contains(stdout, "saved ") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "2026-W41.md")); !os.IsNotExist(err) {
+		t.Fatalf("--out - wrote a file: %v", err)
+	}
+}
+
+func TestWeekInvalidMode(t *testing.T) {
+	home := isolatePlugins(t)
+	cfgPath := writeWeekConfigMode(t, home, filepath.Join(home, "journal"), "desktop")
+	_, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41")
+	if err == nil || !strings.Contains(err.Error(), "output.mode") {
+		t.Fatalf("err = %v\n%s", err, stderr)
+	}
+}
+
+func TestWeekJSONBothOnTerminalWritesFile(t *testing.T) {
+	setTerminal(t, true)
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfigMode(t, home, dir, "both")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--json")
+	if err != nil {
+		t.Fatalf("json: %v\n%s", err, stderr)
+	}
+	dest := filepath.Join(dir, "2026-W41.json")
+	if stdout != "wrote "+dest+"\n" {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	body, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), `"week": "2026-W41"`) {
+		t.Fatalf("json = %s", body)
+	}
+}
+
+func setTerminal(t *testing.T, term bool) {
+	t.Helper()
+	prev := detectTerminal
+	detectTerminal = func(io.Writer) bool { return term }
+	t.Setenv("NO_COLOR", "")
+	t.Cleanup(func() { detectTerminal = prev })
+}
+
+var ansiPattern = regexp.MustCompile(`\x1b\[[0-9;]*[A-Za-z]`)
+
+func stripANSI(s string) string {
+	return ansiPattern.ReplaceAllString(s, "")
+}
+
 func writeWeekConfig(t *testing.T, home, outputDir string) string {
+	t.Helper()
+	return writeWeekConfigMode(t, home, outputDir, "")
+}
+
+func writeWeekConfigMode(t *testing.T, home, outputDir, mode string) string {
 	t.Helper()
 	body := `
 [identity]
 timezone = "UTC"
 week_starts = "monday"
 `
-	if outputDir != "" {
-		body += "\n[output]\ndir = " + quoteTOML(outputDir) + "\n"
+	if outputDir != "" || mode != "" {
+		body += "\n[output]\n"
+		if outputDir != "" {
+			body += "dir = " + quoteTOML(outputDir) + "\n"
+		}
+		if mode != "" {
+			body += "mode = " + quoteTOML(mode) + "\n"
+		}
 	}
 	path := filepath.Join(home, "config.toml")
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {

@@ -123,7 +123,7 @@ func TestInitHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"CODEX_HOME", "~/.claude", "--force", "gh"} {
+	for _, want := range []string{"CODEX_HOME", "~/.claude", "--force", "gh", "output.mode"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}

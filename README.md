@@ -43,6 +43,7 @@ week_starts = "monday"
 
 [output]
 dir = "~/journal/weeklog"
+mode = "both" # both, file, or terminal
 
 [[source]]
 type = "git"
@@ -53,9 +54,9 @@ authors = ["you@example.com"]
 type = "claude-code"
 ```
 
-`config check` reports whether each secret reference resolved and does not print the value. `sources` lists built-in collectors and plugins after a protocol `describe` check. `collect` reads the previous full week in the configured timezone, stores the events, and runs the linker. `week --md` writes that week as Markdown. When `output.dir` is set, the file is `<output.dir>/<year>-W<week>.md`. The file is overwritten on the next run. Text between `<!-- weeklog:notes -->` markers is kept.
+`config check` reports whether each secret reference resolved and does not print the value. `sources` lists built-in collectors and plugins after a protocol `describe` check. `collect` reads the previous full week in the configured timezone, stores the events, and runs the linker. `week` prints a boxed recap on a terminal. When `output.dir` is set and stdout is a terminal, the default `output.mode` of `both` also writes `<output.dir>/<year>-W<week>.md` and prints a dim line naming that file. The file is overwritten on the next run. Text between `<!-- weeklog:notes -->` markers is kept.
 
-`--week 2026-W41` selects an ISO week on both `collect` and `week`. `weeklog week --out -` prints the report to standard output: a boxed recap on a terminal, and Markdown when the output is a pipe, when `NO_COLOR` is set, or when `--plain` is set. `weeklog week --json` prints the same report as JSON.
+`--week 2026-W41` selects an ISO week on both `collect` and `week`. `weeklog week --out -` prints the report to standard output: a boxed recap on a terminal, and Markdown when the output is a pipe, when `NO_COLOR` is set, or when `--plain` is set. `output.mode` is `both`, `file`, or `terminal`. `weeklog week --json` prints the same report as JSON.
 
 ## Config
 
@@ -457,6 +458,8 @@ weeklog unlink git/0123456789abcdef0123456789abcdef01234567
 
 On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, and the top repositories and pull requests. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
 
+When `output.dir` is set, stdout is a terminal, and `--out` is omitted, `output.mode` `both` (the default) writes `<output.dir>/<week>.md` and still prints that recap, then a dim line such as `saved ~/…/2026-W42.md`. A pipe writes the file and prints where it was written. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore `output.mode`. Without `output.dir`, the report is printed to the terminal.
+
 ```bash
 weeklog week
 weeklog week --week 2026-W41
@@ -468,7 +471,7 @@ The report groups linked work into Shipped, In progress, Explored, and Abandoned
 
 Time is the sum of agent-session durations and is labeled as an estimate. An item with no session uses 15 minutes for each cluster of commits. The Markdown file starts with `week`, `generated_at`, and `weeklog_version` front matter.
 
-`--md` is the default. `--json` writes the same structure for other tools. `--out FILE` writes that file; `-` writes to standard output. Without `--out`, a configured `output.dir` receives `<week>.md` (or `.json`). Otherwise the report is printed.
+`--md` is the default when the report is saved or piped. `--json` writes the same structure for other tools. `--out FILE` writes that file; `-` writes to standard output. Without `--out`, `output.mode` and `output.dir` choose the destination. `both` writes `<week>.md` (or `.json`) and prints the recap on a terminal. `file` writes only. `terminal` prints only. When `output.dir` is unset, the report is printed.
 
 Rewriting a Markdown file keeps the manual notes between `<!-- weeklog:notes -->` markers. `output.template` replaces the built-in `text/template`. A relative template path is resolved from the config file's directory.
 

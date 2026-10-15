@@ -23,6 +23,10 @@ The default path is $XDG_CONFIG_HOME/weeklog/config.toml, or
 ~/.config/weeklog/config.toml when XDG_CONFIG_HOME is unset. --config selects
 another file.
 
+The starter sets output.dir to ~/journal/weeklog and output.mode to both.
+both writes the weekly file and prints the recap on a terminal. file writes
+only. terminal prints only.
+
 An existing file is left unchanged. init prints the config it would write.
 --force replaces the file. Token values are never written or printed.`,
 		Example: `  weeklog init
