@@ -56,6 +56,12 @@ func TestInitWritesDetectedSources(t *testing.T) {
 	if cfg.Output.Dir != filepath.Join(home, "journal", "weeklog") {
 		t.Fatalf("dir = %q", cfg.Output.Dir)
 	}
+	if cfg.Output.Mode != "both" || !strings.Contains(result.Body, `mode = "both"`) {
+		t.Fatalf("mode = %q\n%s", cfg.Output.Mode, result.Body)
+	}
+	if !strings.Contains(result.Body, "terminal prints only") {
+		t.Fatalf("init did not document output.mode\n%s", result.Body)
+	}
 	want := []string{"git", "claude-code", "codex"}
 	if len(cfg.Sources) != len(want) {
 		t.Fatalf("sources = %+v", cfg.Sources)

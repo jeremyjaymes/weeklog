@@ -155,6 +155,7 @@ func (r CheckResult) Report() string {
 	fmt.Fprintf(&b, "identity.github: %s\n", displayOr(cfg.Identity.GitHub, "unset"))
 	fmt.Fprintf(&b, "identity.emails: %s\n", displayEmails(cfg.Identity.Emails))
 	fmt.Fprintf(&b, "output.dir: %s\n", displayOr(cfg.Output.Dir, "unset"))
+	fmt.Fprintf(&b, "output.mode: %s\n", displayOutputMode(cfg.Output.Mode))
 	fmt.Fprintf(&b, "output.template: %s\n", displayOr(cfg.Output.Template, "built-in"))
 	if len(cfg.Redaction.ExtraPatterns) > 0 || len(cfg.Redaction.Allow) > 0 {
 		fmt.Fprintf(&b, "redaction.extra_patterns: %d\n", len(cfg.Redaction.ExtraPatterns))
@@ -253,6 +254,13 @@ func displayTimezone(tz string) string {
 	return oneLine(tz)
 }
 
+func displayOutputMode(mode string) string {
+	if strings.TrimSpace(mode) == "" {
+		return OutputModeBoth
+	}
+	return oneLine(mode)
+}
+
 func displayOr(value, fallback string) string {
 	if strings.TrimSpace(value) == "" {
 		return fallback
@@ -310,10 +318,14 @@ func validateIdentity(id Identity) []Issue {
 }
 
 func validateOutput(out Output) []Issue {
+	var issues []Issue
 	if strings.TrimSpace(out.Dir) == "" {
-		return []Issue{warn("output.dir", "is unset")}
+		issues = append(issues, warn("output.dir", "is unset"))
 	}
-	return nil
+	if _, err := out.ResolvedMode(); err != nil {
+		issues = append(issues, errIssue("output.mode", err.Error()))
+	}
+	return issues
 }
 
 func validateRedaction(red Redaction) []Issue {

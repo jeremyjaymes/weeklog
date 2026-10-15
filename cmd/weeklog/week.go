@@ -10,8 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/term"
 	"github.com/mattn/go-isatty"
+	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 
 	"github.com/jeremyjaymes/weeklog/internal/config"
@@ -48,8 +50,14 @@ Markdown report is printed instead when stdout is not a terminal, when
 NO_COLOR is set, or when --plain or --md is set. Pipes keep that Markdown.
 
 With --out FILE, the report is written to FILE. "-" writes to standard
-output. Without --out, a configured output.dir receives <week>.md (or .json).
-Otherwise the report is printed to standard output.
+output. --out ignores output.mode.
+
+Without --out, output.mode chooses the destination. both, the default,
+writes <output.dir>/<week>.md (or .json) and, when stdout is a terminal,
+also prints the recap followed by a dim line naming the saved file. file
+writes that file and prints where it was written. terminal prints the
+report and does not write a file. When output.dir is unset, the report is
+printed to standard output.
 
 Rewriting a Markdown file keeps the text between <!-- weeklog:notes -->
 markers. output.template selects a text/template; a relative path is resolved
@@ -105,6 +113,10 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 	cfg, err := config.Load(path)
+	if err != nil {
+		return err
+	}
+	mode, err := cfg.Output.ResolvedMode()
 	if err != nil {
 		return err
 	}
@@ -174,50 +186,68 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	if asJSON {
 		ext = ".json"
 	}
-	dest, toStdout, err := weekDestination(outFlag, cfg.Output.Dir, rep.FileBase(), ext)
+	out := cmd.OutOrStdout()
+	term := detectTerminal(out)
+	plan, err := planWeekOutput(outFlag, cfg.Output.Dir, mode, rep.FileBase(), ext, term, asJSON)
 	if err != nil {
 		return err
 	}
-	if asJSON {
-		body, err := report.JSON(rep)
-		if err != nil {
-			return err
-		}
-		if toStdout {
-			_, err = cmd.OutOrStdout().Write(body)
-			return err
-		}
-		if err := report.WriteBytes(dest, body); err != nil {
-			return err
-		}
-		_, err = fmt.Fprintf(cmd.OutOrStdout(), "wrote %s\n", dest)
-		return err
-	}
-	if toStdout {
-		out := cmd.OutOrStdout()
-		if styledRecap(out, plain, md, templatePath) {
-			events, err := st.ListEvents(ctx)
+	if plan.path != "" {
+		if asJSON {
+			body, err := report.JSON(rep)
 			if err != nil {
 				return err
 			}
-			body := report.RenderRecap(report.BuildRecap(rep, events, loc), report.RenderOptions{
-				Width: terminalWidth(out),
-				Color: true,
-			})
-			_, err = fmt.Fprint(out, body)
+			if err := report.WriteBytes(plan.path, body); err != nil {
+				return err
+			}
+		} else if err := report.WriteMarkdown(plan.path, templatePath, rep); err != nil {
 			return err
 		}
-		body, err := report.Markdown(rep, templatePath)
+	}
+	if plan.report {
+		if asJSON {
+			body, err := report.JSON(rep)
+			if err != nil {
+				return err
+			}
+			if _, err := out.Write(body); err != nil {
+				return err
+			}
+		} else if err := printWeekReport(out, ctx, st, rep, loc, plain, md, templatePath); err != nil {
+			return err
+		}
+	}
+	switch plan.status {
+	case statusWrote:
+		_, err = fmt.Fprintf(out, "wrote %s\n", plan.path)
+		return err
+	case statusSaved:
+		_, err = fmt.Fprint(out, formatSavedLine(plan.path, colorSavedLine(plain, term)))
+		return err
+	default:
+		return nil
+	}
+}
+
+func printWeekReport(out io.Writer, ctx context.Context, st *store.Store, rep report.Report, loc *time.Location, plain, md bool, templatePath string) error {
+	if styledRecap(out, plain, md, templatePath) {
+		events, err := st.ListEvents(ctx)
 		if err != nil {
 			return err
 		}
+		body := report.RenderRecap(report.BuildRecap(rep, events, loc), report.RenderOptions{
+			Width: terminalWidth(out),
+			Color: true,
+		})
 		_, err = fmt.Fprint(out, body)
 		return err
 	}
-	if err := report.WriteMarkdown(dest, templatePath, rep); err != nil {
+	body, err := report.Markdown(rep, templatePath)
+	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(cmd.OutOrStdout(), "wrote %s\n", dest)
+	_, err = fmt.Fprint(out, body)
 	return err
 }
 
@@ -236,25 +266,96 @@ func weekLabel(window timeutil.Window, loc *time.Location) string {
 	return ""
 }
 
-func weekDestination(outFlag, dir, base, ext string) (string, bool, error) {
+type weekStatus int
+
+const (
+	statusNone weekStatus = iota
+	statusWrote
+	statusSaved
+)
+
+// weekPlan is where one week command sends the report.
+// path is the file to write. report means the recap or Markdown goes to
+// stdout. status is the trailing line: wrote, saved, or none.
+type weekPlan struct {
+	path   string
+	report bool
+	status weekStatus
+}
+
+// planWeekOutput chooses the file and the terminal text.
+// --out FILE and --out - win over output.mode. Without output.dir the report
+// is printed. mode file keeps the previous write-only behavior. mode terminal
+// prints and writes nothing. mode both writes the file and, on a terminal,
+// also prints the report plus a saved line. A pipe stays on the write-only
+// path so the Markdown file is not copied onto stdout. JSON has no recap, so
+// both writes the file and prints the wrote line.
+func planWeekOutput(outFlag, dir, mode, base, ext string, term, asJSON bool) (weekPlan, error) {
 	outFlag = strings.TrimSpace(outFlag)
 	switch {
 	case outFlag == "-":
-		return "", true, nil
+		return weekPlan{report: true}, nil
 	case outFlag != "":
 		path, err := config.ExpandPath(outFlag)
 		if err != nil {
-			return "", false, fmt.Errorf("output path: %w", err)
+			return weekPlan{}, fmt.Errorf("output path: %w", err)
 		}
 		if path == "" {
-			return "", false, errors.New("output path is empty")
+			return weekPlan{}, errors.New("output path is empty")
 		}
-		return path, false, nil
-	case strings.TrimSpace(dir) != "":
-		return filepath.Join(dir, base+ext), false, nil
-	default:
-		return "", true, nil
+		return weekPlan{path: path, status: statusWrote}, nil
 	}
+	if strings.TrimSpace(dir) == "" {
+		return weekPlan{report: true}, nil
+	}
+	path := filepath.Join(dir, base+ext)
+	switch mode {
+	case config.OutputModeFile:
+		return weekPlan{path: path, status: statusWrote}, nil
+	case config.OutputModeTerminal:
+		return weekPlan{report: true}, nil
+	case config.OutputModeBoth:
+		if !term || asJSON {
+			return weekPlan{path: path, status: statusWrote}, nil
+		}
+		return weekPlan{path: path, report: true, status: statusSaved}, nil
+	default:
+		return weekPlan{}, fmt.Errorf("invalid output.mode %s (use both, file, or terminal)", mode)
+	}
+}
+
+// formatSavedLine is the dim confirmation printed after the recap.
+// color false is plain text, used for NO_COLOR and --plain.
+func formatSavedLine(path string, color bool) string {
+	text := "saved " + shortenSavedPath(path)
+	if !color {
+		return text + "\n"
+	}
+	ren := lipgloss.NewRenderer(io.Discard)
+	ren.SetColorProfile(termenv.TrueColor)
+	ren.SetHasDarkBackground(true)
+	return ren.NewStyle().Faint(true).Render(text) + "\n"
+}
+
+func colorSavedLine(plain, term bool) bool {
+	return term && !plain && os.Getenv("NO_COLOR") == ""
+}
+
+// shortenSavedPath renders a home path as ~/…/file when directories sit
+// between the home directory and the file. Other paths stay as written.
+func shortenSavedPath(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return path
+	}
+	rel, err := filepath.Rel(home, path)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return path
+	}
+	if strings.Contains(rel, string(filepath.Separator)) {
+		return filepath.Join("~", "…", filepath.Base(path))
+	}
+	return filepath.Join("~", rel)
 }
 
 func reportTemplate(cfg *config.Config) (string, error) {
@@ -272,8 +373,11 @@ func reportTemplate(cfg *config.Config) (string, error) {
 // A pipe, NO_COLOR, --plain, --md, and a custom template keep the Markdown
 // report so that text stays stable for anything that reads it.
 func styledRecap(w io.Writer, plain, md bool, templatePath string) bool {
-	return wantStyledRecap(plain, md, templatePath, os.Getenv("NO_COLOR"), isTerminal(w))
+	return wantStyledRecap(plain, md, templatePath, os.Getenv("NO_COLOR"), detectTerminal(w))
 }
+
+// detectTerminal reports whether w is a terminal. Tests replace it.
+var detectTerminal = isTerminal
 
 func wantStyledRecap(plain, md bool, templatePath, noColor string, term bool) bool {
 	if plain || md || strings.TrimSpace(templatePath) != "" {

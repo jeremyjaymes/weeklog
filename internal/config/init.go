@@ -208,6 +208,10 @@ func renderStarter(s starter) (string, error) {
 	if err := writeString(&b, "dir", s.OutputDir); err != nil {
 		return "", err
 	}
+	b.WriteString("# both writes the file and prints the recap. file writes only. terminal prints only.\n")
+	if err := writeString(&b, "mode", "both"); err != nil {
+		return "", err
+	}
 	if err := writeString(&b, "template", ""); err != nil {
 		return "", err
 	}
