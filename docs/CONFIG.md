@@ -77,8 +77,12 @@ token = "cmd:op read op://dev/basecamp/token" # env:, cmd:, and file: are option
 | Key | Required | Notes |
 |---|---|---|
 | `dir` | no | Directory for weekly Markdown. A leading `~` is expanded. Unset is a warning. Used when `--out` is omitted and `mode` is `both` or `file`. |
-| `mode` | no | `both`, `file`, or `terminal`. Default `both`. `both` writes `<dir>/<week>.md` and, when stdout is a terminal and `--out` is omitted, also prints the recap and a dim line such as `saved ~/…/2026-W42.md`. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore this setting. A pipe, `NO_COLOR`, and `--plain` still print Markdown. Without `dir`, the report is printed. |
+| `mode` | no | `both`, `file`, or `terminal`. Default `both`. `both` writes `<dir>/<week>.md` and, when stdout is a terminal and `--out` is omitted, also prints the recap and a dim line such as `saved ~/…/2026-W42.md`. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore this setting. A pipe, `NO_COLOR`, and `--plain` still print Markdown. Without `dir`, the report is printed. `--save` writes the file even when `mode` is `terminal`. |
 | `template` | no | Path to a Go `text/template`. Empty selects the built-in template. A leading `~` is expanded. A relative path is resolved from the config file's directory. |
+
+`weeklog week` writes `<dir>/<YYYY-Www>.md` when `dir` is set and `mode` is `both` or `file`. The name is the ISO week, such as `2026-W41.md`. `--save` writes that file even when `mode` is `terminal`. When `dir` is unset, `--save` writes `~/.weeklog/weeks/<YYYY-Www>.md`. That path is the fallback for `--save`. It is not a second directory setting. `--out` selects another file and cannot be combined with `--save`. `-i` does not write a file and cannot be combined with `--save`. `--json` writes `<week>.json` in the same directory.
+
+Overwrite policy: every write replaces the weekly file. An existing file is not skipped. Text between `<!-- weeklog:notes -->` markers is copied into the replacement.
 
 ### Sources
 

@@ -22,8 +22,9 @@
 // The summary counts items per actor. See docs/ATTRIBUTION.md.
 //
 // Markdown comes from an embedded text/template. output.template replaces it.
-// Text between <!-- weeklog:notes --> markers is kept when a Markdown file
-// is overwritten. JSON is the same report without the notes block.
+// Overwrite policy: every write replaces the Markdown file. An existing file
+// is not skipped. Text between <!-- weeklog:notes --> markers is kept.
+// JSON is the same report without the notes block.
 //
 // The terminal recap is a separate view of the same report. It is a bordered
 // summary: one bar per day, a lane per source, per-actor counts, the session

@@ -24,7 +24,7 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--interactive", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/", "scrollable timeline"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--interactive", "--json", "--out", "--save", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/", "scrollable timeline", "Overwrite policy", "~/.weeklog/weeks"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}
@@ -54,6 +54,7 @@ func TestWeekInteractiveNeedsTerminal(t *testing.T) {
 		{"--md"},
 		{"--plain"},
 		{"--out", filepath.Join(home, "out.md")},
+		{"--save"},
 	} {
 		cmdArgs := append([]string{"--config", cfgPath, "week", "-i"}, args...)
 		_, stderr, err = runWeeklog(t, cmdArgs...)
@@ -338,7 +339,7 @@ func TestPlanWeekOutput(t *testing.T) {
 			if tc.ext != "" {
 				ext = tc.ext
 			}
-			got, err := planWeekOutput(tc.out, tc.dir, tc.mode, base, ext, tc.term, tc.asJSON)
+			got, err := planWeekOutput(tc.out, tc.dir, tc.mode, base, ext, tc.term, tc.asJSON, false)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -347,8 +348,228 @@ func TestPlanWeekOutput(t *testing.T) {
 			}
 		})
 	}
-	if _, err := planWeekOutput("", dir, "desktop", base, ext, true, false); err == nil {
+	if _, err := planWeekOutput("", dir, "desktop", base, ext, true, false, false); err == nil {
 		t.Fatal("expected an invalid mode to fail")
+	}
+}
+
+func TestPlanWeekSave(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	const (
+		dir  = "/journal"
+		base = "2026-W42"
+		ext  = ".md"
+	)
+	file := filepath.Join(dir, base+ext)
+	fallback := filepath.Join(home, ".weeklog", "weeks", base+ext)
+	cases := []struct {
+		name   string
+		out    string
+		dir    string
+		mode   string
+		ext    string
+		term   bool
+		asJSON bool
+		save   bool
+		want   weekPlan
+	}{
+		{name: "save both tty", dir: dir, mode: config.OutputModeBoth, term: true, save: true, want: weekPlan{path: file, report: true, status: statusSaved}},
+		{name: "save both pipe", dir: dir, mode: config.OutputModeBoth, save: true, want: weekPlan{path: file, status: statusWrote}},
+		{name: "save terminal tty", dir: dir, mode: config.OutputModeTerminal, term: true, save: true, want: weekPlan{path: file, report: true, status: statusSaved}},
+		{name: "save terminal pipe", dir: dir, mode: config.OutputModeTerminal, save: true, want: weekPlan{path: file, report: true}},
+		{name: "save terminal json", dir: dir, mode: config.OutputModeTerminal, term: true, asJSON: true, ext: ".json", save: true, want: weekPlan{path: filepath.Join(dir, base+".json"), status: statusWrote}},
+		{name: "save file no dir", mode: config.OutputModeFile, save: true, want: weekPlan{path: fallback, status: statusWrote}},
+		{name: "save both no dir pipe", mode: config.OutputModeBoth, save: true, want: weekPlan{path: fallback, status: statusWrote}},
+		{name: "save both no dir tty", mode: config.OutputModeBoth, term: true, save: true, want: weekPlan{path: fallback, report: true, status: statusSaved}},
+		{name: "no save no dir", mode: config.OutputModeBoth, term: true, want: weekPlan{report: true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotExt := ext
+			if tc.ext != "" {
+				gotExt = tc.ext
+			}
+			got, err := planWeekOutput(tc.out, tc.dir, tc.mode, base, gotExt, tc.term, tc.asJSON, tc.save)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got != tc.want {
+				t.Fatalf("plan = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+	if _, err := planWeekOutput("out.md", "", config.OutputModeBoth, base, ext, false, false, true); err == nil || !strings.Contains(err.Error(), "pass either --save or --out") {
+		t.Fatalf("err = %v", err)
+	}
+	if _, err := planWeekOutput("-", dir, config.OutputModeFile, base, ext, true, false, true); err == nil || !strings.Contains(err.Error(), "pass either --save or --out") {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestWeekSaveDefaultDir(t *testing.T) {
+	home := isolatePlugins(t)
+	cfgPath := writeWeekConfig(t, home, "")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+	dest := filepath.Join(home, ".weeklog", "weeks", "2026-W41.md")
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("week: %v\n%s\n%s", err, stdout, stderr)
+	}
+	if _, err := os.Stat(dest); !os.IsNotExist(err) {
+		t.Fatalf("week without --save wrote %s: %v", dest, err)
+	}
+	if !strings.Contains(stdout, "# Week 2026-W41 (Oct 5 – Oct 11)") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--save")
+	if err != nil {
+		t.Fatalf("save: %v\n%s\n%s", err, stdout, stderr)
+	}
+	if stdout != "wrote "+dest+"\n" {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	body, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "# Week 2026-W41 (Oct 5 – Oct 11)") || !strings.Contains(string(body), report.NotesMarker) {
+		t.Fatalf("file = %s", body)
+	}
+	if strings.Contains(string(body), "\x1b") {
+		t.Fatalf("saved markdown contains ANSI\n%s", body)
+	}
+
+	updated := strings.Replace(string(body), report.NotesMarker+"\n"+report.NotesMarker, report.NotesMarker+"\nshipped the gate\n"+report.NotesMarker, 1)
+	if err := os.WriteFile(dest, []byte(updated), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--save"); err != nil {
+		t.Fatal(err)
+	}
+	second, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(second), "shipped the gate") || !strings.Contains(string(second), "# Week 2026-W41 (Oct 5 – Oct 11)") {
+		t.Fatalf("overwrite lost the report or the notes\n%s", second)
+	}
+}
+
+func TestWeekSaveMatchesPlainReport(t *testing.T) {
+	home := isolatePlugins(t)
+	cfgPath := writeWeekConfigMode(t, home, "", "terminal")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	plain, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--plain")
+	if err != nil {
+		t.Fatalf("plain: %v\n%s", err, stderr)
+	}
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--save")
+	if err != nil {
+		t.Fatalf("save: %v\n%s\n%s", err, stdout, stderr)
+	}
+	dest := filepath.Join(home, ".weeklog", "weeks", "2026-W41.md")
+	body, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != stdout {
+		t.Fatalf("file and stdout differ\n--- file ---\n%s\n--- stdout ---\n%s", body, stdout)
+	}
+	if dropGeneratedAt(stdout) != dropGeneratedAt(plain) {
+		t.Fatalf("saved markdown differs from --plain\n--- save ---\n%s\n--- plain ---\n%s", stdout, plain)
+	}
+}
+
+func dropGeneratedAt(s string) string {
+	lines := strings.Split(s, "\n")
+	kept := lines[:0]
+	for _, line := range lines {
+		if strings.HasPrefix(line, "generated_at:") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	return strings.Join(kept, "\n")
+}
+
+func TestWeekSaveUsesOutputDir(t *testing.T) {
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfigMode(t, home, dir, "terminal")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+	dest := filepath.Join(dir, "2026-W41.md")
+	fallback := filepath.Join(home, ".weeklog", "weeks", "2026-W41.md")
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--save")
+	if err != nil {
+		t.Fatalf("save: %v\n%s\n%s", err, stdout, stderr)
+	}
+	body, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(body) != stdout || !strings.Contains(stdout, "# Week 2026-W41 (Oct 5 – Oct 11)") {
+		t.Fatalf("stdout = %s\nfile = %s", stdout, body)
+	}
+	if _, err := os.Stat(fallback); !os.IsNotExist(err) {
+		t.Fatalf("fallback file exists: %v", err)
+	}
+
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--save", "--json")
+	if err != nil {
+		t.Fatalf("json: %v\n%s", err, stderr)
+	}
+	jsonPath := filepath.Join(dir, "2026-W41.json")
+	if stdout != "wrote "+jsonPath+"\n" {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	raw, err := os.ReadFile(jsonPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `"week": "2026-W41"`) {
+		t.Fatalf("json = %s", raw)
+	}
+
+	_, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--save", "--out", dest)
+	if err == nil || !strings.Contains(err.Error(), "pass either --save or --out") {
+		t.Fatalf("err = %v\n%s", err, stderr)
+	}
+}
+
+func TestWeekSaveOnTerminal(t *testing.T) {
+	setTerminal(t, true)
+	home := isolatePlugins(t)
+	cfgPath := writeWeekConfig(t, home, "")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+	dest := filepath.Join(home, ".weeklog", "weeks", "2026-W41.md")
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--save")
+	if err != nil {
+		t.Fatalf("save: %v\n%s\n%s", err, stdout, stderr)
+	}
+	body, err := os.ReadFile(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(body), "# Week 2026-W41 (Oct 5 – Oct 11)") || strings.Contains(string(body), "\x1b") {
+		t.Fatalf("file = %s", body)
+	}
+	if !strings.Contains(stdout, "╭") || strings.Contains(stdout, "# Week 2026-W41") {
+		t.Fatalf("stdout = %q", stdout)
+	}
+	wantSaved := "saved " + filepath.Join("~", "…", "2026-W41.md")
+	if !strings.HasSuffix(stripANSI(stdout), wantSaved+"\n") {
+		t.Fatalf("stdout = %q", stdout)
 	}
 }
 
