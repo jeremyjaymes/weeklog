@@ -230,6 +230,7 @@ func runWeeklog(t *testing.T, args ...string) (string, string, error) {
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
+	root.SetIn(bytes.NewReader(nil))
 	root.SetArgs(args)
 	err := root.Execute()
 	return stdout.String(), stderr.String(), err

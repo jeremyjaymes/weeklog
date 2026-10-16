@@ -307,6 +307,7 @@ func runWeeklogBin(t *testing.T, bin string, env []string, args ...string) (stri
 	cmd := exec.Command(bin, args...)
 	cmd.Env = env
 	var stdout, stderr bytes.Buffer
+	cmd.Stdin = bytes.NewReader(nil)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
