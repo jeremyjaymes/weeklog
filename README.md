@@ -2,6 +2,14 @@
 
 weeklog is a CLI that reads a week of work from pluggable sources, links that activity into units of work, and writes a Markdown log.
 
+![weeklog week recap for the fictional 2026-W41 fixture](docs/demo.gif)
+
+`docs/demo.tape` records `weeklog week --week 2026-W41` against that fixture. It uses no tokens and no personal activity. From the repository root, regenerate the GIF with [VHS](https://github.com/charmbracelet/vhs), plus `ttyd` and `ffmpeg` on `PATH`:
+
+```bash
+vhs docs/demo.tape
+```
+
 ## Quickstart
 
 Requires Go 1.23 or newer. From a checkout of this repository:
