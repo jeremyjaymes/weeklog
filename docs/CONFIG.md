@@ -8,7 +8,7 @@ weeklog picks the file in this order:
 
 1. `--config PATH` when the flag is set. A leading `~` expands to your home directory.
 2. `$XDG_CONFIG_HOME/weeklog/config.toml` when `XDG_CONFIG_HOME` is set.
-3. `$HOME/.config/weeklog/config.toml` on Linux and macOS. On Windows, the OS user config directory.
+3. `$HOME/.config/weeklog/config.toml` on Linux and macOS, which is `~/.config/weeklog/config.toml` when `XDG_CONFIG_HOME` is unset. macOS uses `~/.config` when that variable is unset. On Windows, the OS user config directory.
 
 `--config` is a global flag, so both of these work:
 
@@ -85,7 +85,7 @@ token = "cmd:op read op://dev/basecamp/token" # env:, cmd:, and file: are option
 | `mode` | no | `both`, `file`, or `terminal`. Default `both`. `both` writes `<dir>/<week>.md` and, when stdout is a terminal and `--out` is omitted, also prints the recap and a dim line such as `saved ~/…/2026-W42.md`. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore this setting. A pipe, `NO_COLOR`, and `--plain` still print Markdown. Without `dir`, the report is printed. `--save` writes the file even when `mode` is `terminal`. |
 | `template` | no | Path to a Go `text/template`. Empty selects the built-in template. A leading `~` is expanded. A relative path is resolved from the config file's directory. |
 
-`weeklog week` writes `<dir>/<YYYY-Www>.md` when `dir` is set and `mode` is `both` or `file`. The name is the ISO week, such as `2026-W41.md`. `--save` writes that file even when `mode` is `terminal`. When `dir` is unset, `--save` writes `~/.weeklog/weeks/<YYYY-Www>.md`. That path is the fallback for `--save`. It is not a second directory setting. `--out` selects another file and cannot be combined with `--save`. `-i` does not write a file and cannot be combined with `--save`. `--json` writes `<week>.json` in the same directory.
+`weeklog week` writes `<dir>/<YYYY-Www>.md` when `dir` is set and `mode` is `both` or `file`. The name is the ISO week, such as `2026-W41.md`. `--save` writes that file even when `mode` is `terminal`. When `dir` is unset, `--save` writes `~/.weeklog/weeks/<YYYY-Www>.md`. That path is the fallback for `--save`. It is not a second directory setting. `--out` selects another file and cannot be combined with `--save`. `-i` does not write a file and cannot be combined with `--save` or `--image`. `--json` writes `<week>.json` in the same directory. The recap, week-over-week line, `--save` on the command, `--image`, and `-i` are described in [OUTPUT.md](OUTPUT.md).
 
 Overwrite policy: every write replaces the weekly file. An existing file is not skipped. Text between `<!-- weeklog:notes -->` markers is copied into the replacement.
 
@@ -102,7 +102,7 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 | `linear` | `token` (secret, required). Paste your key into `token`. `ticket_pattern` (regular expression) and the same loopback `endpoint`. Collect reads issues assigned to or created by the API key's user that changed in the window, and their state history. Keys that match `ticket_pattern` are stored on `refs`. When the pattern is omitted, the built-in ticket shape is used. |
 | `cursor-cloud` | `token` (secret, required). Paste one Cursor API key into `token`. Collect reads Cloud Agent runs from `https://api.cursor.com` whose `createdAt` is in the window. The assistant result text is not stored. |
 
-Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. `endpoint` on `github`, `linear`, and `cursor-cloud` is the exception: tests use it to replay recorded HTTP responses against the real binary, and any value that is not loopback http is an error. It is not a setting for the public APIs. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).
+Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. `endpoint` on `github`, `linear`, and `cursor-cloud` is the exception: tests use it to replay recorded HTTP responses against the real binary, and any value that is not loopback http is an error. It is not a setting for the public APIs. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md). Setup and error text for each built-in are in [SOURCES.md](SOURCES.md).
 
 Path fields (`output.dir`, `output.template`, and `roots`) expand a leading `~`. `~user` paths are not supported.
 
@@ -157,9 +157,9 @@ weeklog config check --config ~/.config/weeklog/config.toml
 
 ## `weeklog init`
 
-`weeklog init` writes one `config.toml`. It does not write a `.env` file.
+`weeklog init` writes one `config.toml`. The file is the only one init writes. It does not write a `.env` file.
 
-On a terminal, init opens a form. Pick git, Claude Code, Codex, GitHub, Linear, and Cursor Cloud. Paste tokens into the form; they are stored as literals in that file and are not printed. Set `output.dir` and `output.mode` (`both`, `file`, or `terminal`). Leave the GitHub token blank to keep `token = "cmd:gh auth token"`. Linear and Cursor Cloud need a pasted token when they are selected. Cursor Cloud is written as:
+On a terminal, init opens a form for sources (including Cursor Cloud), literal tokens, and the output dir and mode. Pick git, Claude Code, Codex, GitHub, Linear, and Cursor Cloud. Paste tokens into the form; they are stored as literals in that file and are not printed. Set `output.dir` and `output.mode` (`both`, `file`, or `terminal`). Leave the GitHub token blank to keep `token = "cmd:gh auth token"`. Linear and Cursor Cloud need a pasted token when they are selected. Cursor Cloud is written as:
 
 ```toml
 [[source]]
@@ -176,11 +176,11 @@ token = "crsr_…"
 | GitHub | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token. The file sets `token = "cmd:gh auth token"`. The token value is not written or printed. |
 | git | `~/Projects` contains at least one repository within three directory levels, the same depth the git source scans. `roots` is `["~/Projects"]`. |
 
-The file is created with mode 0600. The directory is created with mode 0700.
+The file is mode 0600. It is created with mode 0600, and the directory is created with mode 0700.
 
 `identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`. `output.mode` is `both`. The file comments the three modes: `both` writes the weekly file and prints the recap, `file` writes only, and `terminal` prints only.
 
-Without the form, sources that are not found are omitted. The file ends with commented Linear and cursor-cloud blocks. Uncomment a block and paste your key into `token`. A cursor-cloud token is one literal value. `env:`, `cmd:`, and `file:` still work on that field.
+Without the form, sources that are not found are omitted. Linear and Cursor cloud agents are not detected. The file includes a commented block for each: paste your key into `token`. A Cursor token is one literal value. See [Linear](sources/linear.md) and [Cursor](sources/cursor-cloud.md). The file ends with those commented blocks. Uncomment a block and paste your key into `token`. `env:`, `cmd:`, and `file:` still work on that field.
 
 ```toml
 # Linear is not detected. Paste your key into token.
@@ -196,7 +196,7 @@ Without the form, sources that are not found are omitted. The file ends with com
 
 `weeklog config check` accepts the file init writes. The non-interactive file does not contain a literal token. GitHub keeps `cmd:gh auth token`. The form can write a pasted token as a literal instead.
 
-An existing config is not overwritten without confirmation. On a terminal, init asks before replacing the file. Otherwise it prints the file it would write and leaves the current file in place. `--force` replaces it when the form is skipped. Printed output redacts literal tokens.
+An existing config is not overwritten without confirmation. An existing file is left unchanged unless you confirm, or unless `--force` is set when the form is skipped. On a terminal, init asks before replacing the file. Otherwise it prints the file it would write and leaves the current file in place. `--force` replaces it when the form is skipped. Printed output redacts literal tokens.
 
 ```bash
 weeklog init
@@ -209,4 +209,4 @@ weeklog init --force
 
 `weeklog collect` loads this same file, resolves optional secret references, and passes the resolved settings to each source. A literal secret is passed through as itself. It refuses to collect when config check would report an error. Warnings, including a group- or world-readable config file, are printed and collection continues. Literal secret values are redacted from stored events.
 
-The collect window uses `identity.timezone` and `identity.week_starts`. With no window flags, collect uses the previous full week in that timezone. See the command help for `--week`, `--since`, `--until`, and `--source`.
+The collect window uses `identity.timezone` and `identity.week_starts`. With no window flags, collect uses the previous full week in that timezone. See the command help for `--week`, `--since`, `--until`, and `--source`. Examples and partial failure are in [COLLECT.md](COLLECT.md).

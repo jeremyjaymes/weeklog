@@ -1,6 +1,6 @@
 # Redaction
 
-Agent transcripts and commit messages can contain pasted secrets. weeklog removes them before an event is written to SQLite, and rendered text is produced from those stored fields. Redaction is always on. There is no switch that stores the original text.
+Agent transcripts and commit messages can contain pasted secrets. Secrets are removed from event text before it is written to SQLite. That includes known token shapes, assignment values, high-entropy tokens, and any secret resolved from the config. Rendered output is built from stored text, so those secrets are not written back out. Redaction is always on. There is no switch that stores the original text.
 
 The replacement is `[REDACTED:<kind>]`, so a log shows that something was removed and what it was.
 
