@@ -7,8 +7,8 @@ import (
 
 // LoopbackEndpoint returns config["endpoint"] when it is an http URL on the
 // loopback interface. The key is not part of any built-in describe schema.
-// config check accepts it only for github and linear, and only for this
-// loopback form, so a test can put a recorded-response server in the config
+// config check accepts it only for github, linear, and cursor-cloud, and only
+// for this loopback form, so a test can put a recorded-response server in the config
 // the real binary loads. Any other value is a config error there.
 //
 // Collectors ignore a value this function rejects. The plugin environment

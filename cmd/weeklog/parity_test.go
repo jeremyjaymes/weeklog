@@ -19,6 +19,7 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/source"
 	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/codex"
+	"github.com/jeremyjaymes/weeklog/internal/sources/cursorcloud"
 	"github.com/jeremyjaymes/weeklog/internal/sources/git"
 	"github.com/jeremyjaymes/weeklog/internal/sources/github"
 	"github.com/jeremyjaymes/weeklog/internal/sources/linear"
@@ -52,9 +53,9 @@ import (
 //   - claude-code and codex use the golden session files under testdata,
 //     copied to $HOME/.claude and $HOME/.codex. CLAUDE_CONFIG_DIR and
 //     CODEX_HOME are cleared because the adapter does not forward them.
-//   - github and linear replay testdata over an httptest server. The collect
-//     config key "endpoint" carries that loopback URL. It is not a describe
-//     field. Collect honors it only for loopback http.
+//   - github, linear, and cursor-cloud replay testdata over an httptest
+//     server. The collect config key "endpoint" carries that loopback URL.
+//     It is not a describe field. Collect honors it only for loopback http.
 func TestBuiltinProtocolParity(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -205,6 +206,31 @@ func TestBuiltinProtocolParity(t *testing.T) {
 		again, againResult := assertCollect(t, "linear", linear.New(), req)
 		if canonicalEvents(t, again) != canonicalEvents(t, events) || againResult.HasCursor {
 			t.Fatal("a cursor changed the linear collect")
+		}
+	})
+
+	t.Run("cursor-cloud", func(t *testing.T) {
+		assertDescribe(t, "cursor-cloud", cursorcloud.New())
+		srv := cursorCloudFixtureServer(t)
+		req := base
+		req.Config = map[string]any{"token": "fixture-token", "endpoint": srv.URL}
+		events, result := assertCollect(t, "cursor-cloud", cursorcloud.New(), req)
+		if !hasID(events, "bc-week/run-done") || len(events) != 8 {
+			t.Fatalf("events = %#v", idsOf(events))
+		}
+		for _, ev := range events {
+			if ev.Summary != "" || strings.Contains(ev.Title, "assistant-result") {
+				t.Fatalf("stored assistant text: %#v", ev)
+			}
+		}
+		if result.HasCursor || result.Dropped != 0 || !logEqual(result.Logs, "skipped 1 malformed run") {
+			t.Fatalf("result = %#v", result)
+		}
+		saved := "cursor-page"
+		req.Cursor = &saved
+		again, againResult := assertCollect(t, "cursor-cloud", cursorcloud.New(), req)
+		if canonicalEvents(t, again) != canonicalEvents(t, events) || againResult.HasCursor {
+			t.Fatal("a cursor changed the cursor-cloud collect")
 		}
 	})
 }
@@ -630,6 +656,54 @@ func linearFixtureServer(t *testing.T) *httptest.Server {
 	}))
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+func cursorCloudFixtureServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	dir := testdataPath(t, "cursor-cloud")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
+			http.Error(w, "auth", http.StatusUnauthorized)
+			return
+		}
+		name := cursorCloudFixtureName(r.URL.Path, r.URL.Query().Get("cursor"))
+		if name == "" {
+			http.Error(w, "no fixture", http.StatusInternalServerError)
+			return
+		}
+		data, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			http.Error(w, "fixture", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func cursorCloudFixtureName(path, cursor string) string {
+	switch path {
+	case "/v1/me":
+		return "me.json"
+	case "/v1/agents":
+		if cursor == "" {
+			return "agents-1.json"
+		}
+		return "agents-2.json"
+	case "/v1/agents/bc-late/runs":
+		return "runs-bc-late.json"
+	case "/v1/agents/bc-week/runs":
+		if cursor == "" {
+			return "runs-bc-week.json"
+		}
+		return "runs-bc-week-2.json"
+	case "/v1/agents/bc-edge/runs":
+		return "runs-bc-edge.json"
+	default:
+		return ""
+	}
 }
 
 func linearFixtureName(query, cursor string) string {

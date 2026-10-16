@@ -6,6 +6,7 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/source"
 	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/codex"
+	"github.com/jeremyjaymes/weeklog/internal/sources/cursorcloud"
 	"github.com/jeremyjaymes/weeklog/internal/sources/git"
 	"github.com/jeremyjaymes/weeklog/internal/sources/github"
 	"github.com/jeremyjaymes/weeklog/internal/sources/linear"
@@ -25,6 +26,7 @@ var builtins = mustBuiltins(
 	codex.New(),
 	github.New(),
 	linear.New(),
+	cursorcloud.New(),
 )
 
 func mustBuiltins(srcs ...source.Source) []builtin {

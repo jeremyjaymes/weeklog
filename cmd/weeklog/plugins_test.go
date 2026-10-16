@@ -13,6 +13,7 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/source"
 	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/codex"
+	"github.com/jeremyjaymes/weeklog/internal/sources/cursorcloud"
 	"github.com/jeremyjaymes/weeklog/internal/sources/git"
 	"github.com/jeremyjaymes/weeklog/internal/sources/github"
 	"github.com/jeremyjaymes/weeklog/internal/sources/linear"
@@ -27,7 +28,7 @@ func TestSourcesListsBuiltins(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("stderr = %q", stderr)
 	}
-	for _, name := range []string{"git", "claude-code", "codex", "github", "linear"} {
+	for _, name := range []string{"git", "claude-code", "codex", "github", "linear", "cursor-cloud"} {
 		if !strings.Contains(stdout, name+"\tbuiltin\tok\t"+builtinDescribedVersion(name)+"\tbuilt-in\n") {
 			t.Fatalf("stdout missing %s\n%s", name, stdout)
 		}
@@ -167,7 +168,7 @@ func TestBuiltinsDescribeThroughProtocol(t *testing.T) {
 				t.Fatalf("manifest = %#v", manifest)
 			}
 			_, err = builtin.src.Collect(context.Background(), source.CollectRequest{}, nil)
-			if builtin.name == "git" || builtin.name == "claude-code" || builtin.name == "codex" || builtin.name == "github" || builtin.name == "linear" {
+			if builtin.name == "git" || builtin.name == "claude-code" || builtin.name == "codex" || builtin.name == "github" || builtin.name == "linear" || builtin.name == "cursor-cloud" {
 				if !errors.Is(err, source.ErrConfig) {
 					t.Fatalf("collect err = %v, want config error", err)
 				}
@@ -209,6 +210,8 @@ func builtinDescribedVersion(name string) string {
 		return github.Version
 	case "linear":
 		return linear.Version
+	case "cursor-cloud":
+		return cursorcloud.Version
 	default:
 		return source.BuiltinVersion
 	}

@@ -9,4 +9,5 @@
 // Init writes a starter file with mode 0600 after detecting local sources.
 // The file does not contain secret values. GitHub uses cmd:gh auth token.
 // A commented Linear block uses token = "" and tells the user to paste a key.
+// A commented cursor-cloud block does the same for one Cursor API key.
 package config

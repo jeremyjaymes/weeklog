@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "id": "run-after",
+      "agentId": "bc-late",
+      "status": "FINISHED",
+      "createdAt": "2026-10-13T01:00:00.000Z",
+      "updatedAt": "2026-10-13T02:00:00.000Z",
+      "durationMs": 1000,
+      "result": "assistant-result-must-not-be-stored"
+    },
+    {
+      "id": "run-inside",
+      "agentId": "bc-late",
+      "status": "FINISHED",
+      "createdAt": "2026-10-11T08:00:00.000Z",
+      "updatedAt": "2026-10-11T08:40:00.000Z",
+      "durationMs": 2400000,
+      "result": "assistant-result-must-not-be-stored",
+      "git": {
+        "branches": [
+          {
+            "repoUrl": "github.com/acme/late",
+            "branch": "cursor/late",
+            "prUrl": "https://github.com/acme/late/pull/9"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -33,7 +33,7 @@ An existing file is left unchanged unless `--force` is set. init enables a sourc
 | codex | `$CODEX_HOME` is a directory, or `~/.codex` when that variable is unset |
 | github | `gh` is on `PATH`, `gh auth status` succeeds, and `gh auth token` prints a token |
 
-The file is mode 0600. GitHub uses `token = "cmd:gh auth token"`. Linear is not detected. The file includes a commented block: paste your key into `token`. See [Linear](#linear). A hand-written file has the same shape:
+The file is mode 0600. GitHub uses `token = "cmd:gh auth token"`. Linear and Cursor cloud agents are not detected. The file includes a commented block for each: paste your key into `token`. A Cursor token is one literal value. See [Linear](#linear) and [Cursor](#cursor). A hand-written file has the same shape:
 
 ```toml
 [identity]
@@ -80,6 +80,7 @@ Built-in sources are compiled into the binary. An external plugin is an executab
 | `codex` | local Codex rollout files | [Codex](#codex) |
 | `github` | pull requests, reviews, and issues | [GitHub](#github) |
 | `linear` | issues and state history | [Linear](#linear) |
+| `cursor-cloud` | Cloud Agent runs | [Cursor](#cursor) |
 
 The protocol is [docs/PLUGIN_PROTOCOL.md](docs/PLUGIN_PROTOCOL.md). `examples/weeklog-source-todoist` is a Python program that speaks the same protocol. It is an example, not a supported source. Copy `weeklog-source-todoist` onto `PATH` and configure a `todoist` source with a `token`. See [examples/weeklog-source-todoist/README.md](examples/weeklog-source-todoist/README.md).
 
@@ -411,6 +412,98 @@ source[0] linear: failed (linear: collect: token is unset)
 
 A malformed issue is a warning, and the source can still succeed. One malformed issue prints `source[N] linear: warn: skipped 1 malformed issue`. One node of another type prints `source[N] linear: warn: skipped 1 unexpected Linear result`. One malformed history entry prints `source[N] linear: warn: skipped 1 malformed history entry`. Counts above one use the plural.
 
+## Cursor
+
+`cursor-cloud` collects Cloud Agent runs from `https://api.cursor.com`. weeklog serves the collector as `weeklog-source-cursor-cloud`. A program of that name on `PATH` cannot replace the built-in.
+
+### Prerequisites
+
+Create an API key under Cursor Dashboard → API Keys, or use a service-account key from team settings. Paste that one key into `token`. The key can also create and delete agents. Collect never calls those routes.
+
+### Config
+
+```toml
+[[source]]
+type = "cursor-cloud"
+# Paste your API key. One literal value.
+token = ""
+```
+
+The `cursor-cloud` source table accepts `token` only. An empty `token = ""` is a config error until the key is pasted. `env:`, `cmd:`, and `file:` references are optional; see [docs/CONFIG.md](docs/CONFIG.md).
+
+Collect calls `GET /v1/me`, `GET /v1/agents`, and `GET /v1/agents/{id}/runs`. It does not call create, cancel, delete, secrets, repositories, usage, a single run, or the SSE stream. Each kept run becomes one `agent_session`. `source_id` is `{agentId}/{runId}`. The window includes `since` and excludes `until`, using the run's `createdAt`. An agent whose `updatedAt` is at or after `since` is read, including an agent updated after `until`, because that agent can still hold an in-window run. The assistant result text is not stored. `summary` is omitted. The source does not store a cursor; the next collect reads the window again.
+
+`CREATING` and `RUNNING` are `open`. `FINISHED` is `done`. `ERROR`, `CANCELLED`, `EXPIRED`, and any other status are `abandoned`. The actor is `userEmail` from `/v1/me` when the key has one. A service-account key has no `userEmail`. Collect logs a warning and continues with no actor. Requests stay at or under 20 per minute. On HTTP 429, collect honors `Retry-After` when it is present and otherwise waits 1s, then 2s, then 4s. If the remaining time cannot finish the window, collect fails and stores none of that source's events.
+
+### Token access
+
+The call sends `Authorization: Bearer <token>`. The token is not written on the query string, and it is not included in error text.
+
+- HTTP 401 and HTTP 403 are reported as `Cursor rejected the token`.
+- HTTP 429 that cannot be retried inside the collect timeout is reported as `Cursor rate limit cannot finish the window`.
+
+Resolved config secrets are still redacted when events are written.
+
+### Verify
+
+```bash
+weeklog config check
+weeklog collect --source cursor-cloud
+```
+
+With the key pasted into `token`, `config check` includes a block like this and does not print the value:
+
+```text
+source[0] cursor-cloud
+  token: literal
+```
+
+The index is the source's position in the file.
+
+`weeklog collect --source cursor-cloud` collects the previous full week, stores the events, and runs the linker. Success includes:
+
+```text
+source[0] cursor-cloud: ok (3 events)
+link: ok
+```
+
+The count is the runs kept for the window. `--week 2026-W41` selects an ISO week. The type name is case-sensitive. A `cursor-cloud` session is Cloud agent. See [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).
+
+### Common errors
+
+`weeklog config check` exits 1 and collect does not start when the file has an error:
+
+| Message | Cause |
+|---|---|
+| `error: source[N].token: required field is missing` | The `cursor-cloud` block has no `token`. |
+| `error: source[N].token: environment variable CURSOR_API_KEY is unset` | `env:CURSOR_API_KEY` is set and the variable is missing. An empty variable says `is empty`. |
+| `error: source[N].token: must not be empty` | `token = ""`. |
+| `error: source[N].token: command exited 1` | `token = "cmd:..."` and the command fails. Empty output says `command produced empty output`. A command that runs longer than 30 seconds says `command timed out`. |
+| `error: source[N].org: unknown field for cursor-cloud` | Any source key other than `token`. |
+
+`weeklog collect --source cursor-cloud` exits before collection with `source cursor-cloud is not configured` when that block is missing.
+
+A collector failure is one line, and the other sources still run. The command exits 1:
+
+```text
+source[0] cursor-cloud: failed (cursor-cloud: collect: token is unset)
+```
+
+| Message inside `failed` | Cause |
+|---|---|
+| `cursor-cloud: collect: token is unset` | `token` is missing, empty, or only whitespace after resolution. |
+| `cursor-cloud: collect: token must be a string` | `token` was not a string. |
+| `cursor-cloud: collect: token contains whitespace or control characters` | The resolved token contains a space or a control character. The token is not printed. |
+| `cursor-cloud: collect: protocol must be 1` | The collect request asked for another protocol version. |
+| `cursor-cloud: collect: Cursor rejected the token` | HTTP 401 or HTTP 403. |
+| `cursor-cloud: collect: Cursor rate limit cannot finish the window` | HTTP 429, or the 20 requests per minute budget, cannot finish inside the collect timeout. |
+| `cursor-cloud: collect: Cursor returned HTTP 502` | Any other non-success HTTP status, with that status in the message. |
+| `cursor-cloud: collect: Cursor request failed: ...` | The request did not complete. The token text is replaced with `[REDACTED]`. |
+| `cursor-cloud: collect: Cursor agents exceeded 20 pages` | The agent list returned more than 20 pages. |
+| `cursor-cloud: collect: Cursor runs for bc-… exceeded 20 pages` | That agent has more than 20 pages of runs. |
+
+A malformed agent or run is a warning, and the source can still succeed. One malformed agent prints `source[N] cursor-cloud: warn: skipped 1 malformed agent`. One malformed run prints `source[N] cursor-cloud: warn: skipped 1 malformed run`. Counts above one use the plural. A service-account key prints `source[N] cursor-cloud: warn: service-account key has no userEmail`.
+
 ## Collect
 
 `weeklog collect` reads the configured sources for one time window and stores the events in SQLite. With no window flags it collects the previous full week in the configured timezone. `--week 2026-W41` selects an ISO week. `--since` and `--until` select an explicit range; `--until` is exclusive.
@@ -447,13 +540,13 @@ weeklog unlink git/0123456789abcdef0123456789abcdef01234567
 
 ## Attribution
 
-Each item in the weekly report has one actor: Human, Claude, Codex, Cloud agent, or Unknown. weeklog reads the actor from evidence on the stored events. A `Co-authored-by` trailer is checked first, then a session the linker joined to a commit, then the session source when the item has no commit, then an agent branch prefix such as `cursor/`. A commit or pull request with no agent evidence is Human. An item whose evidence is missing or names more than one actor is Unknown. The recap, the Markdown summary, and `--json` count the items for each actor. `--json` also includes `actor` and `actor_evidence` on every item. See [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).
+Each item in the weekly report has one actor: Human, Claude, Codex, Cloud agent, or Unknown. weeklog reads the actor from evidence on the stored events. A `Co-authored-by` trailer is checked first, then a session the linker joined to a commit, then the session source when the item has no commit, then an agent branch prefix such as `cursor/`. A `cursor-cloud` session is Cloud agent. A commit or pull request with no agent evidence is Human. An item whose evidence is missing or names more than one actor is Unknown. The recap, the Markdown summary, and `--json` count the items for each actor. `--json` also includes `actor` and `actor_evidence` on every item. See [docs/ATTRIBUTION.md](docs/ATTRIBUTION.md).
 
 ## Week
 
 `weeklog week` renders the previous full week. `--week`, `--since`, and `--until` select another window, using the same rules as `weeklog collect`.
 
-On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, per-actor counts, the session chain, and the top repositories and pull requests. The chain reads like `git log --graph`. Each row is an AI session (Claude or Codex), a commit it produced, and the pull request or issue the linker attached. The stored reason is dimmed under the row. A hard link uses `*` and `|`. A soft link uses `o` and `:`. A chain that does not fit collapses to a `+N more` row, and so does a week with more chains than the panel can show. `--no-graph` hides the chain. The same panel is drawn without color in the plain recap. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
+On a terminal, the command prints a boxed recap: a bar for each day, a colored lane for each source, per-actor counts, the session chain, and the top repositories and pull requests. The chain reads like `git log --graph`. Each row is an AI session (Claude, Codex, or Cursor), a commit it produced, and the pull request or issue the linker attached. The stored reason is dimmed under the row. A hard link uses `*` and `|`. A soft link uses `o` and `:`. A chain that does not fit collapses to a `+N more` row, and so does a week with more chains than the panel can show. `--no-graph` hides the chain. The same panel is drawn without color in the plain recap. A pipe, `NO_COLOR`, or `--plain` prints the Markdown report instead. That Markdown is the same text `--md` writes, so a pipe keeps the previous format.
 
 `-i` opens a scrollable timeline instead of printing or writing the report. The week is one row per day. Enter opens that day's items, and enter again opens the commits, pull requests, and sessions the linker attached. The stored reason is dimmed, with `*` for a hard link and `o` for a soft link, using the same colors as the recap. `q`, ctrl+c, or esc from the day list quits and restores the terminal. `-i` ignores `output.mode` and cannot be combined with `--md`, `--plain`, `--json`, `--out`, or `--save`.
 

@@ -14,6 +14,7 @@ func TestConfigCheckDoesNotPrintSecrets(t *testing.T) {
 		resolved = "wksec_RESOLVED_7f3a9c1e"
 		leaked   = "wksec_STDERR_c0ffee99"
 		literal  = "wksec_LITERAL_bb12dd34"
+		cursor   = "wksec_CURSOR_cc44ee01"
 	)
 	t.Setenv("WEEKLOG_TEST_SECRET", resolved)
 	t.Setenv("WEEKLOG_TEST_STDERR", leaked)
@@ -49,6 +50,10 @@ token = "cmd:printenv WEEKLOG_TEST_SECRET"
 type = "other"
 token = "cmd:sh -c 'printf %s \"$WEEKLOG_TEST_STDERR\" >&2; exit 9'"
 api_key = "` + literal + `"
+
+[[source]]
+type = "cursor-cloud"
+token = "` + cursor + `"
 `
 	path := filepath.Join(dir, "config.toml")
 	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
@@ -60,7 +65,7 @@ api_key = "` + literal + `"
 		t.Fatal("expected config check to fail")
 	}
 	combined := stdout + "\n" + stderr
-	for _, secret := range []string{resolved, leaked, literal} {
+	for _, secret := range []string{resolved, leaked, literal, cursor} {
 		if strings.Contains(combined, secret) {
 			scrubbed := strings.ReplaceAll(combined, secret, "[canary]")
 			t.Fatalf("command output contains secret value\n%s", scrubbed)
@@ -72,6 +77,7 @@ api_key = "` + literal + `"
 		"resolved (cmd:printenv WEEKLOG_TEST_SECRET)",
 		"command exited 9",
 		"api_key: literal",
+		"token: literal",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("stdout missing %q\n%s", want, stdout)

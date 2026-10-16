@@ -1,0 +1,8 @@
+{
+  "apiKeyName": "weeklog",
+  "userId": 42,
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "userEmail": "developer@example.com",
+  "userFirstName": "Alex",
+  "userLastName": "Rivera"
+}

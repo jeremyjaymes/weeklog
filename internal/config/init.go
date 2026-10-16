@@ -74,6 +74,7 @@ type InitResult struct {
 // is on PATH, gh auth status succeeds, and gh auth token prints a token.
 // The written file is mode 0600. GitHub's token is cmd:gh auth token.
 // A commented Linear block uses token = "" and tells the user to paste a key.
+// A commented cursor-cloud block does the same for one Cursor API key.
 // Git is enabled when ~/Projects contains a repository within gitScanDepth.
 func Init(ctx context.Context, opts InitOptions) (InitResult, error) {
 	if ctx == nil {
@@ -254,6 +255,7 @@ func renderStarter(s starter) (string, error) {
 		}
 	}
 	writeLinearPlaceholder(&b)
+	writeCursorCloudPlaceholder(&b)
 	return b.String(), nil
 }
 
@@ -263,6 +265,15 @@ func writeLinearPlaceholder(b *strings.Builder) {
 	b.WriteString("\n# Linear is not detected. Paste your key into token.\n")
 	b.WriteString("# [[source]]\n")
 	b.WriteString("# type = \"linear\"\n")
+	b.WriteString("# token = \"\"\n")
+}
+
+// writeCursorCloudPlaceholder appends a commented Cloud Agents source.
+// The empty token is the placeholder a user replaces with one literal key.
+func writeCursorCloudPlaceholder(b *strings.Builder) {
+	b.WriteString("\n# Cursor cloud agents are not detected. Paste your API key into token.\n")
+	b.WriteString("# [[source]]\n")
+	b.WriteString("# type = \"cursor-cloud\"\n")
 	b.WriteString("# token = \"\"\n")
 }
 

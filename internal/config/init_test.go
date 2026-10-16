@@ -80,6 +80,9 @@ func TestInitWritesDetectedSources(t *testing.T) {
 	if !strings.Contains(result.Body, "Paste your key into token.") || !strings.Contains(result.Body, "# token = \"\"") {
 		t.Fatalf("missing token placeholder\n%s", result.Body)
 	}
+	if !strings.Contains(result.Body, `type = "cursor-cloud"`) || !strings.Contains(result.Body, "Paste your API key into token.") {
+		t.Fatalf("missing cursor-cloud placeholder\n%s", result.Body)
+	}
 	check, err := Check(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
@@ -126,6 +129,9 @@ func TestInitSkipsMissingSources(t *testing.T) {
 	}
 	if !strings.Contains(result.Body, "Paste your key into token.") || !strings.Contains(result.Body, "# token = \"\"") {
 		t.Fatalf("missing token placeholder\n%s", result.Body)
+	}
+	if !strings.Contains(result.Body, `type = "cursor-cloud"`) || !strings.Contains(result.Body, "Paste your API key into token.") {
+		t.Fatalf("missing cursor-cloud placeholder\n%s", result.Body)
 	}
 	check, err := Check(context.Background(), path)
 	if err != nil {

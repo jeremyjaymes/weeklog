@@ -46,6 +46,11 @@ type = "linear"
 token = ""
 ticket_pattern = "GEN-\\d+"
 
+[[source]]
+type = "cursor-cloud"
+# Paste your Cursor API key. A literal value is the normal form.
+token = ""
+
 [[source]]                            # an external plugin works the same way
 type = "basecamp"                     # runs weeklog-source-basecamp
 account_id = "123"
@@ -79,11 +84,11 @@ token = "cmd:op read op://dev/basecamp/token"
 	if err != nil || mode != OutputModeBoth {
 		t.Fatalf("mode = %q, %v", mode, err)
 	}
-	if len(cfg.Sources) != 6 {
+	if len(cfg.Sources) != 7 {
 		t.Fatalf("sources = %d", len(cfg.Sources))
 	}
 
-	wantTypes := []string{"git", "claude-code", "codex", "github", "linear", "basecamp"}
+	wantTypes := []string{"git", "claude-code", "codex", "github", "linear", "cursor-cloud", "basecamp"}
 	for i, want := range wantTypes {
 		if cfg.Sources[i].Type != want {
 			t.Fatalf("source[%d].type = %q, want %q", i, cfg.Sources[i].Type, want)
@@ -106,11 +111,14 @@ token = "cmd:op read op://dev/basecamp/token"
 	if cfg.Sources[4].Settings["ticket_pattern"] != `GEN-\d+` {
 		t.Fatalf("ticket_pattern = %#v", cfg.Sources[4].Settings["ticket_pattern"])
 	}
-	if cfg.Sources[5].Settings["account_id"] != "123" {
-		t.Fatalf("account_id = %#v", cfg.Sources[5].Settings["account_id"])
+	if cfg.Sources[5].Settings["token"] != "" {
+		t.Fatalf("cursor-cloud token = %#v", cfg.Sources[5].Settings["token"])
 	}
-	if cfg.Sources[5].Settings["token"] != "cmd:op read op://dev/basecamp/token" {
-		t.Fatalf("basecamp token = %#v", cfg.Sources[5].Settings["token"])
+	if cfg.Sources[6].Settings["account_id"] != "123" {
+		t.Fatalf("account_id = %#v", cfg.Sources[6].Settings["account_id"])
+	}
+	if cfg.Sources[6].Settings["token"] != "cmd:op read op://dev/basecamp/token" {
+		t.Fatalf("basecamp token = %#v", cfg.Sources[6].Settings["token"])
 	}
 }
 
@@ -450,6 +458,45 @@ func TestCheckCases(t *testing.T) {
 		secretKey string
 		secretVal string
 	}{
+		{
+			name: "cursor-cloud literal token",
+			toml: `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "cursor-cloud"
+token = "` + literal + `"
+`,
+			ok:        true,
+			want:      []string{"source[0] cursor-cloud", "token: literal", "\nok\n"},
+			absent:    []string{literal, "literal secret"},
+			secretIdx: 0,
+			secretKey: "token",
+			secretVal: literal,
+		},
+		{
+			name: "cursor-cloud empty token",
+			toml: `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "cursor-cloud"
+token = ""
+`,
+			ok:   false,
+			want: []string{"source[0].token: must not be empty"},
+		},
+		{
+			name: "cursor-cloud missing token",
+			toml: `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "cursor-cloud"
+`,
+			ok:   false,
+			want: []string{"source[0].token: required field is missing"},
+		},
 		{
 			name: "literal secret",
 			toml: `
@@ -868,6 +915,51 @@ token = "file:empty.txt"
 	}
 }
 
+func TestCursorCloudSecretRefs(t *testing.T) {
+	const secret = "wksec_CURSOR_ref_91"
+	t.Setenv("WEEKLOG_CURSOR_TOKEN", secret)
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "cursor.txt"), []byte(secret+"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	path := writeConfigIn(t, dir, `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "cursor-cloud"
+token = "env:WEEKLOG_CURSOR_TOKEN"
+[[source]]
+type = "cursor-cloud"
+token = "file:cursor.txt"
+[[source]]
+type = "cursor-cloud"
+token = "cmd:printenv WEEKLOG_CURSOR_TOKEN"
+`)
+	result, err := Check(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.OK() {
+		t.Fatalf("report = %s", result.Report())
+	}
+	requireNoSecret(t, secret, "report", result.Report())
+	for _, want := range []string{
+		"resolved (env:WEEKLOG_CURSOR_TOKEN)",
+		"resolved (file:cursor.txt)",
+		"resolved (cmd:printenv WEEKLOG_CURSOR_TOKEN)",
+	} {
+		if !strings.Contains(result.Report(), want) {
+			t.Fatalf("report missing %q\n%s", want, result.Report())
+		}
+	}
+	for i := 0; i < 3; i++ {
+		got, ok := result.Secret(i, "token")
+		if !ok || got != secret {
+			t.Fatalf("source %d token = %q ok=%v", i, got, ok)
+		}
+	}
+}
+
 func TestCheckLoopbackEndpoint(t *testing.T) {
 	const secret = "wksec_LOOP_ENDPOINT_1a"
 	t.Setenv("WEEKLOG_TEST_SECRET", secret)
@@ -882,6 +974,10 @@ endpoint = " http://127.0.0.1:9/graphql "
 type = "linear"
 token = "env:WEEKLOG_TEST_SECRET"
 endpoint = "http://localhost:9"
+[[source]]
+type = "cursor-cloud"
+token = "env:WEEKLOG_TEST_SECRET"
+endpoint = "http://[::1]:9/v1"
 `)
 	result, err := Check(context.Background(), path)
 	if err != nil {
@@ -901,6 +997,10 @@ endpoint = "http://localhost:9"
 	if !ok || linear["endpoint"] != "http://localhost:9" || linear["token"] != secret {
 		t.Fatal("linear plugin config did not keep the loopback endpoint and resolved token")
 	}
+	cloud, ok := result.PluginConfig(2)
+	if !ok || cloud["endpoint"] != "http://[::1]:9/v1" || cloud["token"] != secret {
+		t.Fatal("cursor-cloud plugin config did not keep the loopback endpoint and resolved token")
+	}
 
 	rejected := writeConfig(t, `
 [output]
@@ -916,6 +1016,10 @@ endpoint = "http://example.com/graphql"
 type = "git"
 roots = ["/tmp"]
 endpoint = "http://127.0.0.1:9"
+[[source]]
+type = "cursor-cloud"
+token = "env:WEEKLOG_TEST_SECRET"
+endpoint = "https://api.cursor.com"
 `)
 	result, err = Check(context.Background(), rejected)
 	if err != nil {
@@ -929,6 +1033,7 @@ endpoint = "http://127.0.0.1:9"
 		"source[0].endpoint: must be an http URL on 127.0.0.1, localhost, or ::1",
 		"source[1].endpoint: must be an http URL on 127.0.0.1, localhost, or ::1",
 		"source[2].endpoint: unknown field for git",
+		"source[3].endpoint: must be an http URL on 127.0.0.1, localhost, or ::1",
 	} {
 		if !strings.Contains(report, want) {
 			t.Fatalf("report missing %q\n%s", want, report)

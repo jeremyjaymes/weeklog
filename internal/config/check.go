@@ -432,7 +432,7 @@ func validateBuiltinFields(index int, canonical string, schema sourceSchema, src
 		if loopbackEndpoint(canonical, key, src.Settings[key]) {
 			continue
 		}
-		if key == "endpoint" && (canonical == "github" || canonical == "linear") {
+		if key == "endpoint" && loopbackSource(canonical) {
 			issues = append(issues, errIssue(field, "must be an http URL on 127.0.0.1, localhost, or ::1"))
 			continue
 		}
@@ -441,15 +441,24 @@ func validateBuiltinFields(index int, canonical string, schema sourceSchema, src
 	return issues
 }
 
-// loopbackEndpoint reports whether key is the github or linear test override
-// and value is an http URL on the loopback interface. The key is not part of
-// the describe schema. Collect honors the same shape and ignores anything else.
+// loopbackEndpoint reports whether key is a collector test override and value
+// is an http URL on the loopback interface. The key is not part of the
+// describe schema. Collect honors the same shape and ignores anything else.
 func loopbackEndpoint(canonical, key string, value any) bool {
-	if key != "endpoint" || (canonical != "github" && canonical != "linear") {
+	if key != "endpoint" || !loopbackSource(canonical) {
 		return false
 	}
 	_, ok := source.LoopbackEndpoint(map[string]any{"endpoint": value})
 	return ok
+}
+
+func loopbackSource(canonical string) bool {
+	switch canonical {
+	case "github", "linear", "cursor-cloud":
+		return true
+	default:
+		return false
+	}
 }
 
 func validateExternalSecrets(index int, src *Source) []Issue {

@@ -1,6 +1,6 @@
 # Cursor cloud agent and Grok Bot activity
 
-Research for [#57](https://github.com/jeremyjaymes/weeklog/issues/57). Sources were the public Cursor docs and the staff replies cited below, read on 2026-10-16. This note proposes a plugin. It does not add one.
+Research for [#57](https://github.com/jeremyjaymes/weeklog/issues/57). Sources were the public Cursor docs and the staff replies cited below, read on 2026-10-16. The built-in `cursor-cloud` collector implements the sketch in this note.
 
 Two products were in scope.
 
@@ -83,7 +83,7 @@ A user key lists that user's agents. It does not list teammates' agents. A servi
 
 ### Plugin sketch
 
-Executable name: `weeklog-source-cursor-cloud`. Protocol name: `cursor-cloud`. This sketch follows [PLUGIN_PROTOCOL.md](../PLUGIN_PROTOCOL.md). It is not an installed plugin. `examples/weeklog-source-todoist` remains the working example of the protocol.
+Executable name: `weeklog-source-cursor-cloud`. Protocol name: `cursor-cloud`. The collector is the built-in source in `internal/sources/cursorcloud`. weeklog serves it under that executable name. It is not a separate program on `PATH`. The Python below is the sketch of that collector, not an installed plugin. `examples/weeklog-source-todoist` remains the working example of an external plugin.
 
 `describe` accepts one key:
 
@@ -225,11 +225,13 @@ The two helpers are the paging described above. The HTTP bodies are omitted so t
 
 ### Attribution gap
 
-[ATTRIBUTION.md](../ATTRIBUTION.md) names a session actor from `claude-code`, `claude`, and `codex` only. Any other `agent_session` source is an unlisted agent. When that session is linked to a commit, rule 2 returns Unknown and the later `cursor/` branch rule does not run.
+[ATTRIBUTION.md](../ATTRIBUTION.md) names a session actor from `claude-code`, `claude`, `codex`, and `cursor-cloud`. `cursor-cloud` is Cloud agent. A session with no commit follows rule 3 and is Cloud agent. A session linked to a commit follows rule 2 and is Cloud agent. Rule 1 still wins when the commit or pull request carries `cursoragent@cursor.com`.
 
-Shipping the plugin without a catalog row would relabel items that are Cloud agent today. The follow-up has to add `cursor-cloud` → Cloud agent in `internal/actor` in the same change. A session with no commit then follows rule 3 and is Cloud agent. A session linked to a commit follows rule 2 and is Cloud agent. Rule 1 still wins when the commit or pull request carries `cursoragent@cursor.com`.
+The catalog row shipped with the source. Without it, a linked session is an unlisted agent: rule 2 returns Unknown and the later `cursor/` branch rule does not run. That would relabel items that are Cloud agent from the branch alone.
 
-### Proposed follow-up ticket
+### Follow-up ticket
+
+Filed as [#69](https://github.com/jeremyjaymes/weeklog/issues/69). The built-in implements it.
 
 Title: Add a cursor-cloud source plugin
 
@@ -321,6 +323,6 @@ Using the footer as a fourth attribution rule would recover the `bc-` id on shor
 
 ## Recommendation
 
-Build `weeklog-source-cursor-cloud` from the sketch, with the attribution catalog change in the same pull request, and with the single literal `token` above.
+The built-in `cursor-cloud` source follows the sketch, with the attribution catalog change, and with the single literal `token` above.
 
 Leave Grok Bot off the source list. Keep attributing cloud-agent git output from `cursor/` branches and `Co-authored-by` / `cursoragent` identities. Revisit Grok Bot when Cursor publishes a pull API for Bot turns. OpenTelemetry Export is a team push pipeline, not that API.
