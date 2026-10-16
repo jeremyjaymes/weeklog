@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/jeremyjaymes/weeklog/internal/config"
 )
 
 func TestInitCommandWritesAndChecks(t *testing.T) {
@@ -118,12 +120,62 @@ func TestInitCommandConfigFlag(t *testing.T) {
 	}
 }
 
+func TestInitCommandNoInput(t *testing.T) {
+	home := isolateInitCommand(t)
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, err := runWeeklog(t, "init", "--no-input")
+	if err != nil {
+		t.Fatalf("init: %v\n%s\n%s", err, stdout, stderr)
+	}
+	path := filepath.Join(home, "xdg", "weeklog", "config.toml")
+	if !strings.Contains(stdout, "wrote: "+path) || !strings.Contains(stdout, "# token = \"\"") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if strings.Contains(stdout, "\ntype = \"cursor-cloud\"\n") {
+		t.Fatalf("stdout = %s", stdout)
+	}
+	if _, err := os.Stat(filepath.Join(filepath.Dir(path), ".env")); !os.IsNotExist(err) {
+		t.Fatalf(".env exists: %v", err)
+	}
+}
+
+func TestUseInitForm(t *testing.T) {
+	if useInitForm(true, os.Stdin) {
+		t.Fatal("--no-input opened the form")
+	}
+	if useInitForm(false, strings.NewReader("")) {
+		t.Fatal("non-terminal stdin opened the form")
+	}
+}
+
+func TestMergeInitStatuses(t *testing.T) {
+	detected := []config.SourceStatus{
+		{Type: "git", Enabled: true, Detail: "1 repository under ~/Projects"},
+		{Type: "github", Enabled: false, Detail: "gh not on PATH"},
+	}
+	got := mergeInitStatuses(detected, config.InitChoices{Git: true, CursorCloud: true})
+	if len(got) != 6 {
+		t.Fatalf("statuses = %+v", got)
+	}
+	if !got[0].Enabled || got[0].Detail != "1 repository under ~/Projects" {
+		t.Fatalf("git = %+v", got[0])
+	}
+	if got[3].Enabled || got[3].Type != "github" || got[3].Detail != "not selected" {
+		t.Fatalf("github = %+v", got[3])
+	}
+	if !got[5].Enabled || got[5].Type != "cursor-cloud" || got[5].Detail != "selected" {
+		t.Fatalf("cursor = %+v", got[5])
+	}
+}
+
 func TestInitHelp(t *testing.T) {
 	stdout, stderr, err := runWeeklog(t, "init", "--help")
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"CODEX_HOME", "~/.claude", "--force", "gh", "output.mode", "0600", "paste your key", "cmd:gh auth token"} {
+	for _, want := range []string{"CODEX_HOME", "~/.claude", "--force", "--no-input", "Cursor Cloud", "gh", "output.mode", "0600", "paste your key", "cmd:gh auth token"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}

@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 	"unicode"
@@ -44,6 +45,28 @@ type InitOptions struct {
 	Force bool
 }
 
+// InitChoices is the config written by init.
+// Empty OutputDir, OutputMode, and WeekStarts use the starter defaults.
+// An empty GitHubToken with GitHubSource writes token = "cmd:gh auth token".
+// A non-empty token is stored as a literal. Linear and Cursor Cloud require one.
+type InitChoices struct {
+	Email        string
+	GitHub       string
+	Timezone     string
+	WeekStarts   string
+	OutputDir    string
+	OutputMode   string
+	Git          bool
+	Claude       bool
+	Codex        bool
+	GitHubSource bool
+	GitHubToken  string
+	Linear       bool
+	LinearToken  string
+	CursorCloud  bool
+	CursorToken  string
+}
+
 // SourceStatus is one source init looked for.
 // Detail is safe to print and does not include secret values.
 type SourceStatus struct {
@@ -54,8 +77,8 @@ type SourceStatus struct {
 
 // InitResult is the starter config init built.
 // Body is the TOML that was written, or that would be written when a file
-// already exists. It contains secret references and empty token placeholders,
-// never secret values.
+// already exists. Literal token values are replaced with "[redacted]".
+// Secret references and empty placeholders are kept.
 type InitResult struct {
 	Path    string
 	Wrote   bool
@@ -89,57 +112,99 @@ func Init(ctx context.Context, opts InitOptions) (InitResult, error) {
 	}
 	path = filepath.Clean(path)
 
+	choices, sources, err := Detect(ctx)
+	result := InitResult{Path: path, Sources: sources}
+	if err != nil {
+		return result, err
+	}
+	return writeInit(path, choices, sources, opts.Force)
+}
+
+// Detect reports the sources and identity the non-interactive starter uses.
+// It does not write a file. Cursor Cloud and Linear are left unset; the
+// interactive form offers them.
+func Detect(ctx context.Context) (InitChoices, []SourceStatus, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := ctx.Err(); err != nil {
+		return InitChoices{}, nil, err
+	}
 	home, err := homeDir()
 	if err != nil {
-		return InitResult{}, err
+		return InitChoices{}, nil, err
 	}
 
-	result := InitResult{Path: path}
+	var sources []SourceStatus
 	gitStatus, email, err := detectGit(ctx, home)
+	sources = append(sources, gitStatus)
 	if err != nil {
-		return result, err
+		return InitChoices{}, sources, err
 	}
-	result.Sources = append(result.Sources, gitStatus)
-
 	claudeStatus, err := detectEnvDir("claude-code", "CLAUDE_CONFIG_DIR", claudeDirName, home)
+	sources = append(sources, claudeStatus)
 	if err != nil {
-		return result, err
+		return InitChoices{}, sources, err
 	}
-	result.Sources = append(result.Sources, claudeStatus)
-
 	codexStatus, err := detectEnvDir("codex", "CODEX_HOME", codexDirName, home)
+	sources = append(sources, codexStatus)
 	if err != nil {
-		return result, err
+		return InitChoices{}, sources, err
 	}
-	result.Sources = append(result.Sources, codexStatus)
-
 	githubStatus, login, err := detectGitHub(ctx)
+	sources = append(sources, githubStatus)
 	if err != nil {
-		return result, err
+		return InitChoices{}, sources, err
 	}
-	result.Sources = append(result.Sources, githubStatus)
 
-	body, err := renderStarter(starter{
-		Email:      email,
-		GitHub:     login,
-		Timezone:   localTimezone(),
-		WeekStarts: "monday",
-		OutputDir:  outputDirDefault,
-		Git:        gitStatus.Enabled,
-		Claude:     claudeStatus.Enabled,
-		Codex:      codexStatus.Enabled,
-		GitHubSrc:  githubStatus.Enabled,
-	})
+	return InitChoices{
+		Email:        email,
+		GitHub:       login,
+		Timezone:     localTimezone(),
+		WeekStarts:   "monday",
+		OutputDir:    outputDirDefault,
+		OutputMode:   OutputModeBoth,
+		Git:          gitStatus.Enabled,
+		Claude:       claudeStatus.Enabled,
+		Codex:        codexStatus.Enabled,
+		GitHubSource: githubStatus.Enabled,
+	}, sources, nil
+}
+
+// WriteInitConfig renders choices and writes one config file.
+// An existing file is left unchanged unless replace is true.
+// The result body is safe to print: literal tokens are redacted.
+// The file is mode 0600. No other file, including a .env, is written.
+func WriteInitConfig(path string, choices InitChoices, replace bool) (InitResult, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return InitResult{}, errors.New("config path is empty")
+	}
+	return writeInit(filepath.Clean(path), choices, nil, replace)
+}
+
+func writeInit(path string, choices InitChoices, sources []SourceStatus, replace bool) (InitResult, error) {
+	result := InitResult{Path: path}
+	choices = normalizeInitChoices(choices)
+	if err := validateInitChoices(choices); err != nil {
+		return result, err
+	}
+	if sources == nil {
+		sources = choiceStatuses(choices)
+	}
+	result.Sources = sources
+
+	body, err := renderStarter(choices)
 	if err != nil {
 		return result, err
 	}
-	result.Body = body
+	result.Body = redactTokenLiterals(body, literalTokens(choices))
 
 	existed, err := existingConfig(path)
 	if err != nil {
 		return result, err
 	}
-	if existed && !opts.Force {
+	if existed && !replace {
 		result.Existed = true
 		return result, nil
 	}
@@ -149,6 +214,153 @@ func Init(ctx context.Context, opts InitOptions) (InitResult, error) {
 	result.Wrote = true
 	result.Existed = existed
 	return result, nil
+}
+
+func normalizeInitChoices(c InitChoices) InitChoices {
+	c.Email = strings.TrimSpace(c.Email)
+	c.GitHub = strings.TrimSpace(c.GitHub)
+	c.Timezone = strings.TrimSpace(c.Timezone)
+	c.WeekStarts = strings.TrimSpace(c.WeekStarts)
+	if c.WeekStarts == "" {
+		c.WeekStarts = "monday"
+	}
+	c.OutputDir = strings.TrimSpace(c.OutputDir)
+	if c.OutputDir == "" {
+		c.OutputDir = outputDirDefault
+	}
+	c.OutputMode = strings.ToLower(strings.TrimSpace(c.OutputMode))
+	if c.OutputMode == "" {
+		c.OutputMode = OutputModeBoth
+	}
+	c.GitHubToken = strings.TrimSpace(c.GitHubToken)
+	c.LinearToken = strings.TrimSpace(c.LinearToken)
+	c.CursorToken = strings.TrimSpace(c.CursorToken)
+	return c
+}
+
+func validateInitChoices(c InitChoices) error {
+	if err := ValidateOutputDir(c.OutputDir); err != nil {
+		return err
+	}
+	if err := ValidateOutputMode(c.OutputMode); err != nil {
+		return err
+	}
+	if err := ValidateLiteralToken(c.GitHubToken, false); err != nil {
+		return fmt.Errorf("github token: %w", err)
+	}
+	if c.Linear {
+		if err := ValidateLiteralToken(c.LinearToken, true); err != nil {
+			return fmt.Errorf("linear token: %w", err)
+		}
+	}
+	if c.CursorCloud {
+		if err := ValidateLiteralToken(c.CursorToken, true); err != nil {
+			return fmt.Errorf("cursor-cloud token: %w", err)
+		}
+	}
+	return nil
+}
+
+// ValidateOutputDir reports whether dir can be written as output.dir.
+func ValidateOutputDir(dir string) error {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return errors.New("output dir is empty")
+	}
+	if containsControl(dir) {
+		return errors.New("output dir contains a control character")
+	}
+	return nil
+}
+
+// ValidateOutputMode reports whether mode is both, file, or terminal.
+// An empty mode is accepted and means both.
+func ValidateOutputMode(mode string) error {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	switch mode {
+	case "", OutputModeBoth, OutputModeFile, OutputModeTerminal:
+		return nil
+	default:
+		return fmt.Errorf("invalid output mode %s", quoteUser(mode))
+	}
+}
+
+// ValidateLiteralToken reports whether token can be stored as a literal.
+// An empty token is allowed when required is false.
+// env:, cmd:, and file: prefixes are rejected so the value is the token itself.
+func ValidateLiteralToken(token string, required bool) error {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		if required {
+			return errors.New("token is empty")
+		}
+		return nil
+	}
+	if containsControl(token) {
+		return errors.New("token contains a control character")
+	}
+	ref, err := parseSecretRef(token)
+	if err != nil || ref.Kind != refLiteral {
+		return errors.New("paste the token itself")
+	}
+	return nil
+}
+
+func choiceStatuses(c InitChoices) []SourceStatus {
+	return []SourceStatus{
+		flagStatus("git", c.Git),
+		flagStatus("claude-code", c.Claude),
+		flagStatus("codex", c.Codex),
+		flagStatus("github", c.GitHubSource),
+		flagStatus("linear", c.Linear),
+		flagStatus("cursor-cloud", c.CursorCloud),
+	}
+}
+
+func flagStatus(typ string, enabled bool) SourceStatus {
+	detail := "not selected"
+	if enabled {
+		detail = "selected"
+	}
+	return SourceStatus{Type: typ, Enabled: enabled, Detail: detail}
+}
+
+func literalTokens(c InitChoices) []string {
+	var out []string
+	if c.GitHubSource && isLiteralToken(c.GitHubToken) {
+		out = append(out, c.GitHubToken)
+	}
+	if c.Linear && isLiteralToken(c.LinearToken) {
+		out = append(out, c.LinearToken)
+	}
+	if c.CursorCloud && isLiteralToken(c.CursorToken) {
+		out = append(out, c.CursorToken)
+	}
+	return out
+}
+
+func isLiteralToken(token string) bool {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return false
+	}
+	ref, err := parseSecretRef(token)
+	return err == nil && ref.Kind == refLiteral
+}
+
+func redactTokenLiterals(body string, tokens []string) string {
+	sorted := append([]string(nil), tokens...)
+	sort.Slice(sorted, func(i, j int) bool {
+		return len(sorted[i]) > len(sorted[j])
+	})
+	for _, token := range sorted {
+		quoted, err := tomlBasicString(token)
+		if err != nil {
+			continue
+		}
+		body = strings.ReplaceAll(body, quoted, `"[redacted]"`)
+	}
+	return body
 }
 
 // Report returns the human-readable init summary.
@@ -175,19 +387,7 @@ func (r InitResult) Report() string {
 	return b.String()
 }
 
-type starter struct {
-	Email      string
-	GitHub     string
-	Timezone   string
-	WeekStarts string
-	OutputDir  string
-	Git        bool
-	Claude     bool
-	Codex      bool
-	GitHubSrc  bool
-}
-
-func renderStarter(s starter) (string, error) {
+func renderStarter(s InitChoices) (string, error) {
 	var b strings.Builder
 	b.WriteString("# Written by weeklog init.\n\n[identity]\n")
 	if s.Email != "" {
@@ -213,7 +413,7 @@ func renderStarter(s starter) (string, error) {
 		return "", err
 	}
 	b.WriteString("# both writes the file and prints the recap. file writes only. terminal prints only.\n")
-	if err := writeString(&b, "mode", "both"); err != nil {
+	if err := writeString(&b, "mode", s.OutputMode); err != nil {
 		return "", err
 	}
 	if err := writeString(&b, "template", ""); err != nil {
@@ -245,17 +445,41 @@ func renderStarter(s starter) (string, error) {
 			return "", err
 		}
 	}
-	if s.GitHubSrc {
+	if s.GitHubSource {
 		b.WriteString("\n[[source]]\n")
 		if err := writeString(&b, "type", "github"); err != nil {
 			return "", err
 		}
-		if err := writeString(&b, "token", "cmd:gh auth token"); err != nil {
+		token := "cmd:gh auth token"
+		if s.GitHubToken != "" {
+			token = s.GitHubToken
+		}
+		if err := writeString(&b, "token", token); err != nil {
 			return "", err
 		}
 	}
-	writeLinearPlaceholder(&b)
-	writeCursorCloudPlaceholder(&b)
+	if s.Linear {
+		b.WriteString("\n[[source]]\n")
+		if err := writeString(&b, "type", "linear"); err != nil {
+			return "", err
+		}
+		if err := writeString(&b, "token", s.LinearToken); err != nil {
+			return "", err
+		}
+	} else {
+		writeLinearPlaceholder(&b)
+	}
+	if s.CursorCloud {
+		b.WriteString("\n[[source]]\n")
+		if err := writeString(&b, "type", "cursor-cloud"); err != nil {
+			return "", err
+		}
+		if err := writeString(&b, "token", s.CursorToken); err != nil {
+			return "", err
+		}
+	} else {
+		writeCursorCloudPlaceholder(&b)
+	}
 	return b.String(), nil
 }
 
@@ -665,6 +889,16 @@ func homeDir() (string, error) {
 		return "", errors.New("find home directory: home is empty")
 	}
 	return home, nil
+}
+
+// ConfigExists reports whether path is an existing config file.
+// A directory is an error. A missing path reports false.
+func ConfigExists(path string) (bool, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return false, errors.New("config path is empty")
+	}
+	return existingConfig(filepath.Clean(path))
 }
 
 func existingConfig(path string) (bool, error) {

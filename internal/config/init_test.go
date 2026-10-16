@@ -291,6 +291,230 @@ func assertStatus(t *testing.T, result InitResult, typ string, enabled bool, det
 	t.Fatalf("missing status %s", typ)
 }
 
+func TestWriteInitConfigLiteralsOneFile(t *testing.T) {
+	home := isolateInitHome(t)
+	path := filepath.Join(home, "xdg", "weeklog", "config.toml")
+	const (
+		github = "wksec_GH_INIT_aa11"
+		linear = `wksec_LIN_INIT_"bb22\`
+		cursor = "wksec_CURSOR_INIT_cc33"
+	)
+	result, err := WriteInitConfig(path, InitChoices{
+		Email:        "dev@example.com",
+		GitHub:       "octocat",
+		Timezone:     "America/Chicago",
+		OutputDir:    "~/notes/week",
+		OutputMode:   "file",
+		Git:          true,
+		Claude:       true,
+		GitHubSource: true,
+		GitHubToken:  github,
+		Linear:       true,
+		LinearToken:  linear,
+		CursorCloud:  true,
+		CursorToken:  cursor,
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Wrote || result.Existed {
+		t.Fatalf("wrote=%v existed=%v", result.Wrote, result.Existed)
+	}
+	report := result.Report()
+	for _, secret := range []string{github, linear, cursor} {
+		if strings.Contains(report, secret) || strings.Contains(result.Body, secret) {
+			t.Fatalf("report contains a token\n%s", hide(report, github, linear, cursor))
+		}
+	}
+	if strings.Count(result.Body, `token = "[redacted]"`) != 3 {
+		t.Fatalf("body = %s", result.Body)
+	}
+	if strings.Contains(result.Body, "# token = \"\"") || strings.Contains(result.Body, "env:") {
+		t.Fatalf("body = %s", result.Body)
+	}
+	if !strings.Contains(result.Body, `mode = "file"`) || !strings.Contains(result.Body, `dir = "~/notes/week"`) {
+		t.Fatalf("body = %s", result.Body)
+	}
+	if !strings.Contains(result.Body, `type = "cursor-cloud"`) || !strings.Contains(result.Body, `type = "linear"`) {
+		t.Fatalf("body = %s", result.Body)
+	}
+
+	entries, err := os.ReadDir(filepath.Dir(path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "config.toml" {
+		var names []string
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+		t.Fatalf("config dir = %v", names)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %o, want 0600", info.Mode().Perm())
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(raw)
+	for _, secret := range []string{github, cursor} {
+		if !strings.Contains(text, secret) {
+			t.Fatalf("file missing token\n%s", hide(text, github, linear, cursor))
+		}
+	}
+	if !strings.Contains(text, `wksec_LIN_INIT_\"bb22\\`) {
+		t.Fatalf("linear token was not escaped\n%s", hide(text, github, linear, cursor))
+	}
+	if strings.Contains(text, ".env") || strings.Contains(text, "env:") {
+		t.Fatalf("file = %s", hide(text, github, linear, cursor))
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Output.Mode != "file" || cfg.Output.Dir != filepath.Join(home, "notes", "week") {
+		t.Fatalf("output = %+v", cfg.Output)
+	}
+	wantTypes := []string{"git", "claude-code", "github", "linear", "cursor-cloud"}
+	if len(cfg.Sources) != len(wantTypes) {
+		t.Fatalf("sources = %+v", cfg.Sources)
+	}
+	for i, typ := range wantTypes {
+		if cfg.Sources[i].Type != typ {
+			t.Fatalf("source[%d] = %s", i, cfg.Sources[i].Type)
+		}
+	}
+	check, err := Check(context.Background(), path)
+	if err != nil || !check.OK() {
+		t.Fatalf("check: %v\n%s", err, hide(check.Report(), github, linear, cursor))
+	}
+	if strings.Contains(check.Report(), github) || strings.Contains(check.Report(), linear) || strings.Contains(check.Report(), cursor) {
+		t.Fatal(hide(check.Report(), github, linear, cursor))
+	}
+	got, ok := check.Secret(4, "token")
+	if !ok || got != cursor {
+		t.Fatal("cursor token was not stored as a literal")
+	}
+	got, ok = check.Secret(3, "token")
+	if !ok || got != linear {
+		t.Fatal("linear token was not stored as a literal")
+	}
+}
+
+func TestWriteInitConfigKeepsExistingWithoutReplace(t *testing.T) {
+	home := isolateInitHome(t)
+	path := filepath.Join(home, "config.toml")
+	const (
+		old    = "wksec_OLD_CONFIG_aa11"
+		cursor = "wksec_CURSOR_INIT_dd44"
+	)
+	original := "token = \"" + old + "\"\n# keep-me\n"
+	if err := os.WriteFile(path, []byte(original), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := WriteInitConfig(path, InitChoices{
+		CursorCloud: true,
+		CursorToken: cursor,
+		OutputMode:  "terminal",
+	}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Wrote || !result.Existed {
+		t.Fatalf("wrote=%v existed=%v", result.Wrote, result.Existed)
+	}
+	report := result.Report()
+	if strings.Contains(report, old) || strings.Contains(report, cursor) {
+		t.Fatal(hide(report, old, cursor))
+	}
+	if !strings.Contains(report, "not overwritten") || !strings.Contains(report, `type = "cursor-cloud"`) {
+		t.Fatal(report)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != original {
+		t.Fatalf("file = %q", got)
+	}
+
+	result, err = WriteInitConfig(path, InitChoices{
+		CursorCloud: true,
+		CursorToken: cursor,
+		OutputMode:  "terminal",
+	}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.Wrote || !result.Existed {
+		t.Fatalf("wrote=%v existed=%v", result.Wrote, result.Existed)
+	}
+	got, err = os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(got), old) || !strings.Contains(string(got), cursor) || !strings.Contains(string(got), `mode = "terminal"`) {
+		t.Fatalf("file = %s", hide(string(got), cursor))
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %o, want 0600", info.Mode().Perm())
+	}
+	if _, err := os.Stat(filepath.Join(home, ".env")); !os.IsNotExist(err) {
+		t.Fatalf(".env exists: %v", err)
+	}
+}
+
+func TestWriteInitConfigRejectsBadTokens(t *testing.T) {
+	home := isolateInitHome(t)
+	path := filepath.Join(home, "config.toml")
+	cases := []InitChoices{
+		{CursorCloud: true},
+		{Linear: true, LinearToken: "   "},
+		{CursorCloud: true, CursorToken: "env:CURSOR_TOKEN"},
+		{GitHubSource: true, GitHubToken: "cmd:gh auth token"},
+		{GitHubSource: true, GitHubToken: "file:~/token"},
+		{CursorCloud: true, CursorToken: "wksec\nSECRET"},
+		{OutputMode: "printer"},
+	}
+	for _, choices := range cases {
+		if _, err := WriteInitConfig(path, choices, false); err == nil {
+			t.Fatalf("accepted %#v", choices)
+		}
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("file created for %#v: %v", choices, err)
+		}
+	}
+
+	result, err := WriteInitConfig(path, InitChoices{GitHubSource: true}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Body, `token = "cmd:gh auth token"`) || !strings.Contains(result.Body, "# token = \"\"") {
+		t.Fatalf("body = %s", result.Body)
+	}
+	if strings.Contains(result.Body, "\ntype = \"cursor-cloud\"\n") || strings.Contains(result.Body, "\ntype = \"linear\"\n") {
+		t.Fatalf("body = %s", result.Body)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), `token = "cmd:gh auth token"`) {
+		t.Fatalf("file = %s", raw)
+	}
+}
+
 func isolateInitHome(t *testing.T) string {
 	t.Helper()
 	home := t.TempDir()

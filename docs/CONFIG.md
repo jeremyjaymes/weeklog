@@ -157,7 +157,17 @@ weeklog config check --config ~/.config/weeklog/config.toml
 
 ## `weeklog init`
 
-`weeklog init` writes a starter config and enables the sources it finds on this machine.
+`weeklog init` writes one `config.toml`. It does not write a `.env` file.
+
+On a terminal, init opens a form. Pick git, Claude Code, Codex, GitHub, Linear, and Cursor Cloud. Paste tokens into the form; they are stored as literals in that file and are not printed. Set `output.dir` and `output.mode` (`both`, `file`, or `terminal`). Leave the GitHub token blank to keep `token = "cmd:gh auth token"`. Linear and Cursor Cloud need a pasted token when they are selected. Cursor Cloud is written as:
+
+```toml
+[[source]]
+type = "cursor-cloud"
+token = "crsr_…"
+```
+
+`--no-input`, or a stdin that is not a terminal, skips the form. init then enables the sources it finds on this machine:
 
 | Check | Enabled when |
 |---|---|
@@ -170,7 +180,7 @@ The file is created with mode 0600. The directory is created with mode 0700.
 
 `identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`. `output.mode` is `both`. The file comments the three modes: `both` writes the weekly file and prints the recap, `file` writes only, and `terminal` prints only.
 
-Sources that are not found are omitted. The file ends with commented Linear and cursor-cloud blocks. Uncomment a block and paste your key into `token`. A cursor-cloud token is one literal value. `env:`, `cmd:`, and `file:` still work on that field.
+Without the form, sources that are not found are omitted. The file ends with commented Linear and cursor-cloud blocks. Uncomment a block and paste your key into `token`. A cursor-cloud token is one literal value. `env:`, `cmd:`, and `file:` still work on that field.
 
 ```toml
 # Linear is not detected. Paste your key into token.
@@ -184,12 +194,13 @@ Sources that are not found are omitted. The file ends with commented Linear and 
 # token = ""
 ```
 
-`weeklog config check` accepts the file init writes. A literal token value is not written. GitHub keeps `cmd:gh auth token`.
+`weeklog config check` accepts the file init writes. The non-interactive file does not contain a literal token. GitHub keeps `cmd:gh auth token`. The form can write a pasted token as a literal instead.
 
-An existing config is not overwritten. init prints the file it would write and leaves the current file in place. `--force` replaces it.
+An existing config is not overwritten without confirmation. On a terminal, init asks before replacing the file. Otherwise it prints the file it would write and leaves the current file in place. `--force` replaces it when the form is skipped. Printed output redacts literal tokens.
 
 ```bash
 weeklog init
+weeklog init --no-input
 weeklog init --config ./config.toml
 weeklog init --force
 ```

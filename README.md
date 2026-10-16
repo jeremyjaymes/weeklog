@@ -22,9 +22,9 @@ weeklog week --md
 go build -ldflags "-X main.version=v0.1.0" -o weeklog ./cmd/weeklog
 ```
 
-`weeklog init` writes `$XDG_CONFIG_HOME/weeklog/config.toml`, or `~/.config/weeklog/config.toml` when `XDG_CONFIG_HOME` is unset. macOS uses `~/.config` when that variable is unset. `--config` selects another file.
+`weeklog init` writes `$XDG_CONFIG_HOME/weeklog/config.toml`, or `~/.config/weeklog/config.toml` when `XDG_CONFIG_HOME` is unset. macOS uses `~/.config` when that variable is unset. `--config` selects another file. The file is the only one init writes.
 
-An existing file is left unchanged unless `--force` is set. init enables a source only when it can find it:
+On a terminal, init opens a form for sources (including Cursor Cloud), literal tokens, and the output dir and mode. `--no-input` skips it. An existing file is left unchanged unless you confirm, or unless `--force` is set when the form is skipped. Without a terminal, init enables a source only when it can find it:
 
 | Source | Enabled when |
 |---|---|
