@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -71,17 +72,64 @@ api_key = "` + literal + `"
 		"resolved (cmd:printenv WEEKLOG_TEST_SECRET)",
 		"command exited 9",
 		"api_key: literal",
-		"literal secret",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("stdout missing %q\n%s", want, stdout)
 		}
+	}
+	if strings.Contains(stdout, "literal secret") {
+		t.Fatalf("literal secret was warned\n%s", stdout)
 	}
 	if !strings.Contains(stderr, "config check failed") {
 		t.Fatalf("stderr = %q", stderr)
 	}
 	if strings.Contains(stderr, "Usage:") {
 		t.Fatalf("stderr dumped usage:\n%s", stderr)
+	}
+}
+
+func TestConfigCheckWarnsWhenGroupOrWorldReadable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("config mode bits are not meaningful on Windows")
+	}
+	const literal = "wksec_LITERAL_bb12dd34"
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	body := `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "github"
+token = "` + literal + `"
+`
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, err := runWeeklog(t, "config", "check", "--config", path)
+	if err != nil {
+		t.Fatalf("loose mode should warn, not fail: %v\n%s\n%s", err, stdout, stderr)
+	}
+	combined := stdout + "\n" + stderr
+	if strings.Contains(combined, literal) {
+		t.Fatalf("command output contains secret value\n%s", strings.ReplaceAll(combined, literal, "[canary]"))
+	}
+	if strings.Contains(stdout, "literal secret") {
+		t.Fatalf("literal secret was warned\n%s", stdout)
+	}
+	for _, want := range []string{
+		"token: literal",
+		"warning: config: file is group- or world-readable",
+		"1 warning",
+	} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("stdout missing %q\n%s", want, stdout)
+		}
+	}
+	if stderr != "" {
+		t.Fatalf("stderr = %q", stderr)
 	}
 }
 

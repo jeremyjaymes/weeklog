@@ -38,11 +38,12 @@ type = "codex"                        # reads CODEX_HOME or ~/.codex
 
 [[source]]
 type = "github"
-token = "env:GITHUB_TOKEN"            # or "cmd:gh auth token"
+token = "cmd:gh auth token"
 
 [[source]]
 type = "linear"
-token = "env:LINEAR_API_KEY"
+# Paste your key.
+token = ""
 ticket_pattern = "GEN-\\d+"
 
 [[source]]                            # an external plugin works the same way
@@ -96,8 +97,11 @@ token = "cmd:op read op://dev/basecamp/token"
 	if !ok || len(authors) != 1 || authors[0] != "jeremy@geneseesoftware.com" {
 		t.Fatalf("authors = %#v", cfg.Sources[0].Settings["authors"])
 	}
-	if cfg.Sources[3].Settings["token"] != "env:GITHUB_TOKEN" {
+	if cfg.Sources[3].Settings["token"] != "cmd:gh auth token" {
 		t.Fatalf("github token = %#v", cfg.Sources[3].Settings["token"])
+	}
+	if cfg.Sources[4].Settings["token"] != "" {
+		t.Fatalf("linear token = %#v", cfg.Sources[4].Settings["token"])
 	}
 	if cfg.Sources[4].Settings["ticket_pattern"] != `GEN-\d+` {
 		t.Fatalf("ticket_pattern = %#v", cfg.Sources[4].Settings["ticket_pattern"])
@@ -447,7 +451,7 @@ func TestCheckCases(t *testing.T) {
 		secretVal string
 	}{
 		{
-			name: "literal warning",
+			name: "literal secret",
 			toml: `
 [output]
 dir = "/tmp/weeklog-out"
@@ -456,8 +460,8 @@ type = "github"
 token = "` + literal + `"
 `,
 			ok:        true,
-			want:      []string{"token: literal", "warning: source[0].token: literal secret", "1 warning"},
-			absent:    []string{literal},
+			want:      []string{"token: literal", "\nok\n"},
+			absent:    []string{literal, "literal secret"},
 			secretIdx: 0,
 			secretKey: "token",
 			secretVal: literal,
@@ -929,6 +933,67 @@ endpoint = "http://127.0.0.1:9"
 		if !strings.Contains(report, want) {
 			t.Fatalf("report missing %q\n%s", want, report)
 		}
+	}
+}
+
+func TestCheckWarnsWhenConfigIsGroupOrWorldReadable(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("config mode bits are not meaningful on Windows")
+	}
+	const literal = "wksec_LITERAL_bb12dd34"
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.toml")
+	body := `
+[output]
+dir = "/tmp/weeklog-out"
+[[source]]
+type = "github"
+token = "` + literal + `"
+`
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		mode os.FileMode
+		warn bool
+	}{
+		{mode: 0o644, warn: true},
+		{mode: 0o640, warn: true},
+		{mode: 0o604, warn: true},
+		{mode: 0o600, warn: false},
+		{mode: 0o700, warn: false},
+		{mode: 0o620, warn: false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.mode.String(), func(t *testing.T) {
+			if err := os.Chmod(path, tc.mode); err != nil {
+				t.Fatal(err)
+			}
+			result, err := Check(context.Background(), path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !result.OK() {
+				t.Fatalf("issues = %#v", result.Issues)
+			}
+			report := result.Report()
+			requireNoSecret(t, literal, "report", report)
+			for _, issue := range result.Issues {
+				requireNoSecret(t, literal, "issue", issue.Field+" "+issue.Message)
+			}
+			warned := strings.Contains(report, "warning: config: file is group- or world-readable")
+			if warned != tc.warn {
+				t.Fatalf("mode %o warned=%v\n%s", tc.mode, warned, report)
+			}
+			if !strings.Contains(report, "token: literal") || strings.Contains(report, "literal secret") {
+				t.Fatalf("report = %s", report)
+			}
+			got, ok := result.Secret(0, "token")
+			if !ok || got != literal {
+				t.Fatal("resolved secret mismatch")
+			}
+		})
 	}
 }
 

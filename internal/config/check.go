@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"unicode"
@@ -50,6 +52,9 @@ type resolvedSecret struct {
 // Check loads path, validates it, and resolves secret references.
 // A non-nil error means the file could not be read or parsed.
 // Validation and resolution problems are Issues on the result.
+// A literal secret is the normal form and is not a warning.
+// On Unix, a config file that is group- or world-readable is a warning.
+// Issue text never includes secret values.
 func Check(ctx context.Context, path string) (CheckResult, error) {
 	cfg, err := Load(path)
 	if err != nil {
@@ -63,6 +68,7 @@ func Check(ctx context.Context, path string) (CheckResult, error) {
 	secrets, issues := resolveSecrets(ctx, cfg)
 	result.secrets = secrets
 	result.Issues = append(result.Issues, issues...)
+	result.Issues = append(result.Issues, configPermIssues(cfg.Path)...)
 	redactLiteralSettings(cfg, secrets)
 	return result, nil
 }
@@ -490,7 +496,6 @@ func resolveSecrets(ctx context.Context, cfg *Config) ([]resolvedSecret, []Issue
 			if ref.Kind == refLiteral {
 				secret.value = secretValue{s: strings.TrimSpace(value)}
 				secrets = append(secrets, secret)
-				issues = append(issues, warn(field, "literal secret; use an env:, cmd:, or file: reference"))
 				continue
 			}
 			resolved, err := resolveSecretRef(ctx, ref, cfg.Dir)
@@ -552,6 +557,23 @@ func sortedSettingKeys(settings map[string]any) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// configPermIssues warns when the config file is group- or world-readable.
+// Windows permission bits do not describe the ACL, so this check is Unix-only.
+// The message is fixed and does not include file contents.
+func configPermIssues(path string) []Issue {
+	if runtime.GOOS == "windows" {
+		return nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil
+	}
+	if info.Mode().Perm()&0o044 != 0 {
+		return []Issue{warn("config", "file is group- or world-readable")}
+	}
+	return nil
 }
 
 func errIssue(field, message string) Issue {

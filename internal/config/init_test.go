@@ -4,6 +4,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -75,6 +77,9 @@ func TestInitWritesDetectedSources(t *testing.T) {
 	if len(roots) != 1 || roots[0] != filepath.Join(home, "Projects") {
 		t.Fatalf("roots = %#v", roots)
 	}
+	if !strings.Contains(result.Body, "Paste your key into token.") || !strings.Contains(result.Body, "# token = \"\"") {
+		t.Fatalf("missing token placeholder\n%s", result.Body)
+	}
 	check, err := Check(context.Background(), path)
 	if err != nil {
 		t.Fatal(err)
@@ -82,12 +87,15 @@ func TestInitWritesDetectedSources(t *testing.T) {
 	if !check.OK() {
 		t.Fatal(check.Report())
 	}
+	if strings.Contains(check.Report(), "group- or world-readable") {
+		t.Fatal(check.Report())
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm()&0o077 != 0 {
-		t.Fatalf("mode = %o", info.Mode().Perm())
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+		t.Fatalf("mode = %o, want 0600", info.Mode().Perm())
 	}
 }
 
@@ -113,8 +121,11 @@ func TestInitSkipsMissingSources(t *testing.T) {
 	assertStatus(t, result, "git", false, "no repositories under ~/Projects")
 	assertStatus(t, result, "claude-code", false, "$CLAUDE_CONFIG_DIR not found")
 	assertStatus(t, result, "codex", false, "$CODEX_HOME is not a directory")
-	if strings.Contains(result.Body, "[[source]]") {
+	if uncommentedSource.MatchString(result.Body) {
 		t.Fatalf("sources were written\n%s", result.Body)
+	}
+	if !strings.Contains(result.Body, "Paste your key into token.") || !strings.Contains(result.Body, "# token = \"\"") {
+		t.Fatalf("missing token placeholder\n%s", result.Body)
 	}
 	check, err := Check(context.Background(), path)
 	if err != nil {
@@ -257,6 +268,8 @@ func TestValidZone(t *testing.T) {
 		t.Fatalf("utc=%q local=%q bad=%q", validZone("utc"), validZone("local"), validZone("Not/AZone"))
 	}
 }
+
+var uncommentedSource = regexp.MustCompile(`(?m)^\[\[source\]\]`)
 
 func assertStatus(t *testing.T, result InitResult, typ string, enabled bool, detail string) {
 	t.Helper()

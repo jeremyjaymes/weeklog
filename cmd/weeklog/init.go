@@ -19,6 +19,11 @@ init checks Claude Code ($CLAUDE_CONFIG_DIR or ~/.claude), Codex ($CODEX_HOME
 or ~/.codex), a logged-in gh CLI, and git repositories under ~/Projects.
 The file enables only the sources it found.
 
+The file is written with mode 0600. GitHub uses token = "cmd:gh auth token".
+A commented Linear block uses token = "" and tells you to paste your key.
+env:, cmd:, and file: references are optional. Token values are never written
+or printed.
+
 The default path is $XDG_CONFIG_HOME/weeklog/config.toml, or
 ~/.config/weeklog/config.toml when XDG_CONFIG_HOME is unset. --config selects
 another file.
@@ -28,7 +33,7 @@ both writes the weekly file and prints the recap on a terminal. file writes
 only. terminal prints only.
 
 An existing file is left unchanged. init prints the config it would write.
---force replaces the file. Token values are never written or printed.`,
+--force replaces the file.`,
 		Example: `  weeklog init
   weeklog init --config ./config.toml
   weeklog init --force`,
