@@ -4,3 +4,11 @@
 *.exe
 *.test
 *.out
+
+# Local config and collected data. config.toml holds tokens.
+config.toml
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3

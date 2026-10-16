@@ -47,7 +47,7 @@ A user key and a service-account key see different agents. `GET /v1/me` on a use
 
 There is no documented read-only scope. The key that can list runs can also create agents, send follow-ups, cancel runs, and delete agents. The secrets routes on the same host accept the same user and service-account keys. Their responses list names, types, and repositories, and the docs say no response includes a secret value. A create or update sends the value. A collect must not call those routes. On the secrets routes, team API keys and automation webhook API keys are rejected, and a key that starts with `grok_` receives `403 key_not_supported`.
 
-Jeremy's preference for this source is one literal token in `config.toml`: a single `token` field, and no second credential. That matches weeklog's current secret form. A literal value is normal. `config check` reports the field as `literal` and does not print it. On Unix, a config file that is group- or world-readable is a warning. `weeklog init` writes the file with mode 0600. `env:`, `cmd:`, and `file:` still work and are optional. This sketch does not use them.
+This source keeps one literal token in `config.toml`: a single `token` field, and no second credential. That matches weeklog's current secret form. A literal value is normal. `config check` reports the field as `literal` and does not print it. On Unix, a config file that is group- or world-readable is a warning. `weeklog init` writes the file with mode 0600. `env:`, `cmd:`, and `file:` still work and are optional. This sketch does not use them.
 
 ### Rate limits
 
@@ -98,7 +98,7 @@ Executable name: `weeklog-source-cursor-cloud`. Protocol name: `cursor-cloud`. T
 }
 ```
 
-Config, with the literal token Jeremy asked for:
+Config, with one literal token:
 
 ```toml
 [[source]]
