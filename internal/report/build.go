@@ -79,6 +79,16 @@ type Item struct {
 	EstimateSeconds int       `json:"estimate_seconds"`
 	Reasons         []string  `json:"reasons,omitempty"`
 	Bullets         []string  `json:"bullets"`
+	// Members are the in-window events on this item. Reason is the linker's
+	// stored text, empty when the item was not built from a work item.
+	// Members are not part of the Markdown or JSON report.
+	Members []Member `json:"-"`
+}
+
+// Member is one event on an item, with the reason the linker stored.
+type Member struct {
+	Event  store.Record
+	Reason string
 }
 
 // Other is one rollup of events that are not rendered as work items.
@@ -346,11 +356,36 @@ func newItem(id int64, title, status string, shown, all []store.Record, reasons 
 		EstimateSeconds: durationSeconds(estimate),
 		Reasons:         reasonList,
 		Bullets:         bullets,
+		Members:         itemMembers(shown, all, reasons),
 	}
 	if it.Title == "" {
 		it.Title = strings.TrimSuffix(it.Heading, " — "+key)
 	}
 	return it
+}
+
+// itemMembers pairs each shown event with the linker reason stored for it.
+// A loose item has no reasons, so Reason is empty.
+func itemMembers(shown, all []store.Record, reasons []string) []Member {
+	byKey := make(map[string]string, len(all))
+	for i, rec := range all {
+		if i >= len(reasons) {
+			break
+		}
+		byKey[memberKey(rec)] = strings.TrimSpace(reasons[i])
+	}
+	out := make([]Member, 0, len(shown))
+	for _, ev := range shown {
+		out = append(out, Member{Event: ev, Reason: byKey[memberKey(ev)]})
+	}
+	return out
+}
+
+func memberKey(rec store.Record) string {
+	if rec.ID != 0 {
+		return fmt.Sprintf("#%d", rec.ID)
+	}
+	return rec.Source + "\x00" + rec.SourceID + "\x00" + rec.TS.UTC().Format(time.RFC3339Nano)
 }
 
 func itemBullets(prs, commits, sessions, tickets []store.Record, estimate time.Duration, repoName string, loc *time.Location, reasons []string) []string {

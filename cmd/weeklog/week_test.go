@@ -24,9 +24,41 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--interactive", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/", "scrollable timeline"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
+		}
+	}
+}
+
+func TestWeekInteractiveNeedsTerminal(t *testing.T) {
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfig(t, home, dir)
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "-i")
+	if err == nil || !strings.Contains(err.Error(), "needs a terminal") {
+		t.Fatalf("err = %v\n%s", err, stderr)
+	}
+	if stdout != "" || strings.Contains(stderr, "# Week") {
+		t.Fatalf("interactive wrote a report\nstdout=%q\nstderr=%s", stdout, stderr)
+	}
+	if _, statErr := os.Stat(filepath.Join(dir, "2026-W41.md")); !os.IsNotExist(statErr) {
+		t.Fatalf("interactive created the markdown file: %v", statErr)
+	}
+
+	for _, args := range [][]string{
+		{"--json"},
+		{"--md"},
+		{"--plain"},
+		{"--out", filepath.Join(home, "out.md")},
+	} {
+		cmdArgs := append([]string{"--config", cfgPath, "week", "-i"}, args...)
+		_, stderr, err = runWeeklog(t, cmdArgs...)
+		if err == nil || !strings.Contains(err.Error(), "pass either --interactive or") {
+			t.Fatalf("args %v err = %v\n%s", args, err, stderr)
 		}
 	}
 }

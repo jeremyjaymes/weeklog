@@ -1,14 +1,12 @@
 package report
 
 import (
-	"io"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/muesli/termenv"
 
 	"github.com/jeremyjaymes/weeklog/internal/event"
 )
@@ -58,26 +56,14 @@ func RenderRecap(recap Recap, opt RenderOptions) string {
 	if width > 120 {
 		width = 120
 	}
-	ren := lipgloss.NewRenderer(io.Discard)
-	if opt.Color {
-		ren.SetColorProfile(termenv.TrueColor)
-	} else {
-		ren.SetColorProfile(termenv.Ascii)
-	}
-	ren.SetHasDarkBackground(true)
-
+	style := NewStyle(opt.Color)
 	content := width - 2
 	lines := layoutRecap(recap, content)
 	painted := make([]string, len(lines))
 	for i, line := range lines {
-		painted[i] = paintLine(ren, line)
+		painted[i] = paintLine(style.ren, line)
 	}
-	box := ren.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(colorBorder)).
-		Padding(0, 1).
-		Width(width)
-	return box.Render(strings.Join(painted, "\n")) + "\n"
+	return style.frame(strings.Join(painted, "\n"), width) + "\n"
 }
 
 // span is one painted run. layoutRecap builds these. The renderer colors

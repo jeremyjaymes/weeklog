@@ -16,6 +16,7 @@ import (
 	"github.com/muesli/termenv"
 	"github.com/spf13/cobra"
 
+	"github.com/jeremyjaymes/weeklog/internal/browse"
 	"github.com/jeremyjaymes/weeklog/internal/config"
 	"github.com/jeremyjaymes/weeklog/internal/report"
 	"github.com/jeremyjaymes/weeklog/internal/store"
@@ -78,10 +79,22 @@ Rewriting a Markdown file keeps the text between <!-- weeklog:notes -->
 markers. output.template selects a text/template; a relative path is resolved
 from the config file's directory. An empty template uses the built-in one.
 
+-i, or --interactive, opens a scrollable timeline on a terminal instead of
+printing or writing the report. The week is one row per day. Enter opens
+that day's items, and enter again opens the commits, pull requests, and
+sessions the linker attached. The stored reason is dimmed, with * for a
+hard link and o for a soft link, in the same colors as the recap. j and k
+move, esc or h steps back, and q or ctrl+c quits and restores the terminal.
+Esc from the day list also quits. -i does not write a file and ignores
+output.mode. It cannot be combined with --md, --plain, --json, or --out.
+--no-graph applies only to the recap.
+
 The database is the same file weeklog collect uses. --db selects another file.
 Run weeklog collect first so the week has events to render.`,
 		Example: `  weeklog week
   weeklog week --week 2026-W41
+  weeklog week -i
+  weeklog week -i --week 2026-W41
   weeklog week --plain
   weeklog week --no-graph
   weeklog week --json
@@ -96,6 +109,7 @@ Run weeklog collect first so the week has events to render.`,
 	cmd.Flags().Bool("md", false, "write Markdown (the default for a pipe or a file)")
 	cmd.Flags().Bool("plain", false, "print Markdown even when stdout is a terminal")
 	cmd.Flags().Bool("no-graph", false, "hide the session chain in the recap")
+	cmd.Flags().BoolP("interactive", "i", false, "open a scrollable timeline instead of printing the report")
 	cmd.Flags().Bool("json", false, "write JSON")
 	cmd.Flags().String("out", "", "write to this file instead of output.dir or standard output")
 	cmd.Flags().String("db", "", "SQLite database (default is the weeklog data directory)")
@@ -124,6 +138,26 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	}
 	if plain && asJSON {
 		return errors.New("pass either --plain or --json")
+	}
+	interactive, err := cmd.Flags().GetBool("interactive")
+	if err != nil {
+		return err
+	}
+	if interactive {
+		outFlag, err := cmd.Flags().GetString("out")
+		if err != nil {
+			return err
+		}
+		switch {
+		case md:
+			return errors.New("pass either --interactive or --md")
+		case asJSON:
+			return errors.New("pass either --interactive or --json")
+		case plain:
+			return errors.New("pass either --interactive or --plain")
+		case strings.TrimSpace(outFlag) != "":
+			return errors.New("pass either --interactive or --out")
+		}
 	}
 	flag, err := cmd.Root().PersistentFlags().GetString("config")
 	if err != nil {
@@ -202,6 +236,9 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	if interactive {
+		return runInteractiveWeek(cmd, ctx, rep, loc)
+	}
 
 	ext := ".md"
 	if asJSON {
@@ -249,6 +286,17 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	default:
 		return nil
 	}
+}
+
+func runInteractiveWeek(cmd *cobra.Command, ctx context.Context, rep report.Report, loc *time.Location) error {
+	out := cmd.OutOrStdout()
+	if !detectTerminal(os.Stdin) || !detectTerminal(out) {
+		return errors.New("interactive week browser needs a terminal")
+	}
+	return browse.Run(ctx, out, report.BuildBrowser(rep, loc), browse.Options{
+		Color: os.Getenv("NO_COLOR") == "",
+		Width: terminalWidth(out),
+	})
 }
 
 func printWeekReport(out io.Writer, ctx context.Context, st *store.Store, rep report.Report, loc *time.Location, plain, md, noGraph bool, templatePath string) error {
