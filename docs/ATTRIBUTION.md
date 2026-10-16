@@ -83,7 +83,7 @@ Each item starts with the actor and the evidence value:
 - Actor: Claude · session-commit
 ```
 
-The terminal recap, with color and without it, has an Actors section with the same counts. `--json` sets `actor` and `actor_evidence` on every item and `summary.actors` to the counts. Zero counts are omitted. Unknown is last.
+The terminal recap, with color and without it, has an Actors section with the same counts. The recap, the Markdown summary, and `--json` count the items for each actor. `--json` also includes `actor` and `actor_evidence` on every item. `--json` sets `actor` and `actor_evidence` on every item and `summary.actors` to the counts. Zero counts are omitted. Unknown is last.
 
 `actor_evidence` is one of `co-authored-by`, `session-commit`, `branch`, `session`, `human`, `conflict`, `unrecognized-agent`, `unlinked`, or `no-evidence`.
 

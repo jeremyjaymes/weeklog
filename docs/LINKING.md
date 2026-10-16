@@ -1,8 +1,13 @@
 # Linking
 
-weeklog groups stored events into work items. A work item has a title, a status, and one stored reason for each event in it. Linking is deterministic. It does not call a language model.
+weeklog groups stored events into work items. A work item has a title, a status, and one stored reason for each event in it. Linking is deterministic and stores a reason on every link. It does not call a language model.
 
 `weeklog collect` runs the linker after sources finish. `weeklog link-run` runs it again without collecting. Both commands read every stored event, not only the events inside the time window. The window still matters: its end is the clock for a stale branch, and its timezone chooses the local day for leftovers.
+
+```bash
+weeklog link-run
+weeklog link-run --week 2026-W41
+```
 
 ## Pass 1, hard links
 
@@ -26,7 +31,7 @@ Pass 2 only attaches an event that pass 1 left out of a hard-link group. It does
 
 ## Pass 3, leftovers
 
-Events that are still alone are grouped by repository and local day. The day is chosen in the window's timezone. A session that is still alone becomes its own item.
+Events that are still alone are grouped by repository and local day. The day is chosen in the window's timezone. A session with no commits is its own item. A session that is still alone becomes its own item.
 
 ## Status and title
 
@@ -77,7 +82,7 @@ Every event in a work item stores why it is there. When several rules match, the
 
 Each row stores the kind (`link` or `unlink`), the event row ids, and the time it was recorded. It does not copy event text. Event text is redacted when the event is stored, and the override does not keep a second copy. Deleting an event removes the overrides that name it.
 
-The linker replays the rows after pass 3, oldest first. That is later than the hard-link and soft-link rules, so an override can join two hard-link groups or pull one event out of a hard link. Pass 2 will not do either of those. A later row wins: unlink, then link, leaves the events together; link, then unlink, leaves the named event on its own.
+The linker applies those rows after pass 3, including on the next `link-run` or `collect`. It replays the rows oldest first. That is later than the hard-link and soft-link rules, so an override can join two hard-link groups or pull one event out of a hard link. Pass 2 will not do either of those. A later row wins: unlink, then link, leaves the events together; link, then unlink, leaves the named event on its own.
 
 The correction is still there after `weeklog link-run` and after `weeklog collect`. Collect upserts events on `(source, source_id)` and keeps the same row id, so the override still points at the event.
 
@@ -123,4 +128,4 @@ git/0123456789abcdef0123456789abcdef01234567
   reason: leftover:github.com/jeremyjaymes/otto 2026-10-09, override:link
 ```
 
-`weeklog week` renders those reasons in the item's `Linked by:` line, for both Markdown and JSON. The terminal recap also draws them on the session chain, dimmed under each session, commit, pull request, or issue. Soft-link reasons (`files overlap`, `git branch`, `head branch`, `only session in window`, `revert`) use `o` and `:`. Hard-link reasons use `*` and `|`. `--no-graph` hides that panel. A pipe, `NO_COLOR`, or `--plain` still prints the Markdown report. `weeklog week -i` opens the same week as a scrollable day list and drills from a day to an item to those linker-attached commits, pull requests, and sessions.
+`weeklog week` shows the same reasons, including `override:link` and `override:unlink`, in the item's `Linked by:` line, for both Markdown and JSON. The terminal recap also draws them on the session chain, dimmed under each session, commit, pull request, or issue. Soft-link reasons (`files overlap`, `git branch`, `head branch`, `only session in window`, `revert`) use `o` and `:`. Hard-link reasons use `*` and `|`. `--no-graph` hides that panel. A pipe, `NO_COLOR`, or `--plain` still prints the Markdown report. `weeklog week -i` opens the same week as a scrollable day list and drills from a day to an item to those linker-attached commits, pull requests, and sessions.
