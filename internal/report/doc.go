@@ -33,4 +33,9 @@
 // soft link is drawn with o and :, and a hard link with * and |. Long chains
 // collapse to a "+N more" row. The same panel is drawn when color is off.
 // Recap.Delta is an empty slot for a later week-over-week line.
+//
+// The interactive browser is another view of the same report. BuildBrowser
+// groups items onto local days and keeps the linker-attached commits, pull
+// requests, and sessions, including the stored reason. The bubbletea model
+// paints those rows with Style, the same lipgloss palette as the recap.
 package report
