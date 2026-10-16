@@ -104,6 +104,7 @@ const recapTopN = 5
 var knownLaneOrder = []string{
 	"claude-code",
 	"codex",
+	"cursor-cloud",
 	"git",
 	"github",
 	"linear",
@@ -113,11 +114,12 @@ var knownLaneOrder = []string{
 // take a color from extraLaneColors, chosen from the source name so a plugin
 // keeps the same color from week to week.
 var knownLaneColors = map[string]string{
-	"claude-code": "#CC785C",
-	"codex":       "#10A37F",
-	"git":         "#F05033",
-	"github":      "#A78BFA",
-	"linear":      "#5E6AD2",
+	"claude-code":  "#CC785C",
+	"codex":        "#10A37F",
+	"git":          "#F05033",
+	"github":       "#A78BFA",
+	"linear":       "#5E6AD2",
+	"cursor-cloud": "#818CF8",
 }
 
 var extraLaneColors = []string{

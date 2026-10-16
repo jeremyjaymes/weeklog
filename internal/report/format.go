@@ -123,6 +123,8 @@ func sourceLabel(name string) string {
 		return "GitHub"
 	case "linear":
 		return "Linear"
+	case "cursor-cloud":
+		return "Cursor"
 	case "git":
 		return "Git"
 	case "":

@@ -223,6 +223,8 @@ func sessionGraphLabel(source string) string {
 		return "Claude"
 	case "codex":
 		return "Codex"
+	case "cursor-cloud":
+		return "Cursor"
 	default:
 		label := sourceLabel(source)
 		if label == "" || label == "session" {

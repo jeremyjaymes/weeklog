@@ -1,0 +1,44 @@
+{
+  "items": [
+    {
+      "id": "bc-late",
+      "name": "Ship the follow-up",
+      "status": "ACTIVE",
+      "env": {"type": "cloud"},
+      "url": "https://cursor.com/agents/bc-late",
+      "createdAt": "2026-10-11T08:00:00.000Z",
+      "updatedAt": "2026-10-13T02:00:00.000Z",
+      "latestRunId": "run-after"
+    },
+    {
+      "id": "bc-week",
+      "name": "Add the gate",
+      "status": "IDLE",
+      "env": {"type": "cloud"},
+      "url": "https://cursor.com/agents/bc-week",
+      "createdAt": "2026-10-05T00:00:00.000Z",
+      "updatedAt": "2026-10-10T16:30:00.000Z",
+      "latestRunId": "run-done"
+    },
+    {
+      "name": "missing id",
+      "updatedAt": "2026-10-10T00:00:00.000Z"
+    },
+    {
+      "id": "../secrets",
+      "name": "do not fetch",
+      "updatedAt": "2026-10-10T00:00:00.000Z",
+      "url": "https://cursor.com/agents/secrets"
+    },
+    {
+      "id": "bc-edge",
+      "name": "Hold the edge",
+      "status": "IDLE",
+      "url": "https://cursor.com/agents/bc-edge",
+      "createdAt": "2026-10-05T00:00:00.000Z",
+      "updatedAt": "2026-10-05T00:00:00.000Z",
+      "latestRunId": "run-edge"
+    }
+  ],
+  "nextCursor": "agents-2"
+}

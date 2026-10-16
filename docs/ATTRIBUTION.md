@@ -39,6 +39,7 @@ The item contains an agent session and a commit, and at least one stored reason 
 |---|---|
 | `claude-code`, `claude` | Claude |
 | `codex` | Codex |
+| `cursor-cloud` | Cloud agent |
 
 The source match is case-insensitive. Every known session in the item must name the same actor. A session source that is not listed, or two known sources, makes the item Unknown.
 
@@ -93,6 +94,8 @@ A Claude trailer on a `cursor/` branch is Claude. The trailer is the first rule.
 A Claude session linked to a commit on `cursor/admin-gate` is Claude. The session-to-commit link is ahead of the branch prefix.
 
 A commit and a pull request on `cursor/webhooks`, with no session, are Cloud agent.
+
+A `cursor-cloud` session linked to a commit is Cloud agent. A `cursor-cloud` session with no commit is Cloud agent. A `cursoragent@cursor.com` trailer on that commit is still Cloud agent, from rule 1. A `cursor-cloud` session and a Codex session linked to the same commit are Unknown.
 
 A Codex session with no commit is Codex, including when that session recorded a `cursor/` branch.
 

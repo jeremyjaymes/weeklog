@@ -80,6 +80,9 @@ exit 1
 	if !strings.Contains(result.Body, "Paste your key into token.") || !strings.Contains(result.Body, "# token = \"\"") {
 		t.Fatalf("body = %s", result.Body)
 	}
+	if !strings.Contains(result.Body, `type = "cursor-cloud"`) || !strings.Contains(result.Body, "Paste your API key into token.") {
+		t.Fatalf("missing cursor-cloud placeholder\n%s", result.Body)
+	}
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)

@@ -57,6 +57,11 @@ type = "linear"
 token = ""
 ticket_pattern = "GEN-\\d+"
 
+[[source]]
+type = "cursor-cloud"
+# Paste your API key. One literal value.
+token = ""
+
 [[source]] # external plugins use the same table
 type = "basecamp"
 account_id = "123"
@@ -91,8 +96,9 @@ Each `[[source]]` table needs a `type`. Built-in types and the fields `config ch
 | `codex` | none. Reads `$CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl` when that variable is set, and `~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl` otherwise. |
 | `github` | `token` (secret, optional). A literal token is supported. `weeklog init` writes `token = "cmd:gh auth token"`. When `token` is unset, collect runs `gh auth token`. `endpoint` is accepted only when it is an http URL on 127.0.0.1, localhost, or ::1. |
 | `linear` | `token` (secret, required). Paste your key into `token`. `ticket_pattern` (regular expression) and the same loopback `endpoint`. Collect reads issues assigned to or created by the API key's user that changed in the window, and their state history. Keys that match `ticket_pattern` are stored on `refs`. When the pattern is omitted, the built-in ticket shape is used. |
+| `cursor-cloud` | `token` (secret, required). Paste one Cursor API key into `token`. Collect reads Cloud Agent runs from `https://api.cursor.com` whose `createdAt` is in the window. The assistant result text is not stored. |
 
-Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. `endpoint` on `github` and `linear` is the exception: tests use it to replay recorded HTTP responses against the real binary, and any value that is not loopback http is an error. It is not a setting for the public APIs. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).
+Any other `type` is an external plugin. Its keys are kept. Unknown fields on a built-in type are an error. `endpoint` on `github`, `linear`, and `cursor-cloud` is the exception: tests use it to replay recorded HTTP responses against the real binary, and any value that is not loopback http is an error. It is not a setting for the public APIs. Source type names are case-sensitive (`git`, not `Git`). `config check` does not run plugins. `weeklog doctor` checks that each configured type is a built-in or a discovered plugin, and it does not resolve secrets. The plugin protocol is [PLUGIN_PROTOCOL.md](PLUGIN_PROTOCOL.md).
 
 Path fields (`output.dir`, `output.template`, and `roots`) expand a leading `~`. `~user` paths are not supported.
 
@@ -104,7 +110,7 @@ Path fields (`output.dir`, `output.template`, and `roots`) expand a leading `~`.
 
 These source fields are secrets:
 
-- Built-in fields marked secret (`token` on `github` and `linear`).
+- Built-in fields marked secret (`token` on `github`, `linear`, and `cursor-cloud`).
 - On an external source, `token`, `secret`, `password`, `passwd`, `api_key`, and keys ending in `_token`, `_secret`, `_password`, or `_key`.
 
 A literal value is the normal form. weeklog is a single-user local tool: paste the key into the field. `weeklog init` writes `config.toml` with mode 0600 and uses an empty placeholder, with a comment telling you to paste your key:
@@ -160,12 +166,17 @@ The file is created with mode 0600. The directory is created with mode 0700.
 
 `identity.emails` and git `authors` use `git config --global user.email` when that value has no spaces. `identity.github` is the login reported by `gh auth status` when it is a GitHub login. `timezone` is `$TZ` when that name is a valid IANA zone, otherwise the machine zone when it can be named. `week_starts` is `monday`. `output.dir` is `~/journal/weeklog`. `output.mode` is `both`. The file comments the three modes: `both` writes the weekly file and prints the recap, `file` writes only, and `terminal` prints only.
 
-Sources that are not found are omitted. The file ends with a commented Linear block. Uncomment it and paste your key into `token`:
+Sources that are not found are omitted. The file ends with commented Linear and cursor-cloud blocks. Uncomment a block and paste your key into `token`. A cursor-cloud token is one literal value. `env:`, `cmd:`, and `file:` still work on that field.
 
 ```toml
 # Linear is not detected. Paste your key into token.
 # [[source]]
 # type = "linear"
+# token = ""
+
+# Cursor cloud agents are not detected. Paste your API key into token.
+# [[source]]
+# type = "cursor-cloud"
 # token = ""
 ```
 

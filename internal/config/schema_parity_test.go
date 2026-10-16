@@ -7,6 +7,7 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/source"
 	"github.com/jeremyjaymes/weeklog/internal/sources/claudecode"
 	"github.com/jeremyjaymes/weeklog/internal/sources/codex"
+	"github.com/jeremyjaymes/weeklog/internal/sources/cursorcloud"
 	"github.com/jeremyjaymes/weeklog/internal/sources/git"
 	"github.com/jeremyjaymes/weeklog/internal/sources/github"
 	"github.com/jeremyjaymes/weeklog/internal/sources/linear"
@@ -19,6 +20,7 @@ func TestBuiltinManifestMatchesConfigSchema(t *testing.T) {
 		codex.New(),
 		github.New(),
 		linear.New(),
+		cursorcloud.New(),
 	}
 	for _, src := range sources {
 		manifest, err := src.Describe(context.Background())

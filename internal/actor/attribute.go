@@ -23,9 +23,10 @@ type Event struct {
 // sessionSources maps an agent_session source to an actor.
 // A source that is not listed is an agent weeklog cannot name.
 var sessionSources = map[string]string{
-	"claude-code": Claude,
-	"claude":      Claude,
-	"codex":       Codex,
+	"claude-code":  Claude,
+	"claude":       Claude,
+	"codex":        Codex,
+	"cursor-cloud": CloudAgent,
 }
 
 // branchPrefixes maps the first segment of a branch to an actor.

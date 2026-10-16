@@ -1,0 +1,21 @@
+{
+  "items": [
+    {
+      "id": "bc-old",
+      "name": "Old work",
+      "status": "ARCHIVED",
+      "url": "https://cursor.com/agents/bc-old",
+      "createdAt": "2026-09-01T00:00:00.000Z",
+      "updatedAt": "2026-10-01T00:00:00.000Z",
+      "latestRunId": "run-old-agent"
+    },
+    {
+      "id": "bc-older",
+      "name": "Older work",
+      "status": "ARCHIVED",
+      "url": "https://cursor.com/agents/bc-older",
+      "createdAt": "2026-08-01T00:00:00.000Z",
+      "updatedAt": "2026-09-01T00:00:00.000Z"
+    }
+  ]
+}

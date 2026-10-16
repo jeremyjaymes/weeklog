@@ -20,9 +20,9 @@ or ~/.codex), a logged-in gh CLI, and git repositories under ~/Projects.
 The file enables only the sources it found.
 
 The file is written with mode 0600. GitHub uses token = "cmd:gh auth token".
-A commented Linear block uses token = "" and tells you to paste your key.
-env:, cmd:, and file: references are optional. Token values are never written
-or printed.
+Linear and cursor-cloud are commented. Uncomment a block and paste your key
+into token. A cursor-cloud token is one literal value. env:, cmd:, and file:
+references are optional. Token values are never written or printed.
 
 The default path is $XDG_CONFIG_HOME/weeklog/config.toml, or
 ~/.config/weeklog/config.toml when XDG_CONFIG_HOME is unset. --config selects

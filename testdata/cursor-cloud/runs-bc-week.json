@@ -1,0 +1,79 @@
+{
+  "items": [
+    {
+      "id": "run-until",
+      "agentId": "bc-week",
+      "status": "EXPIRED",
+      "createdAt": "2026-10-12T00:00:00.000Z",
+      "updatedAt": "2026-10-12T00:00:00.000Z",
+      "result": "assistant-result-must-not-be-stored"
+    },
+    {
+      "id": "run-done",
+      "agentId": "bc-week",
+      "status": "FINISHED",
+      "createdAt": "2026-10-10T15:00:00.000Z",
+      "updatedAt": "2026-10-10T16:30:00.000Z",
+      "durationMs": 5400000,
+      "result": "assistant-result-must-not-be-stored",
+      "git": {
+        "branches": [
+          {
+            "repoUrl": "github.com/acme/otto",
+            "branch": "cursor/add-gate",
+            "prUrl": "https://github.com/acme/otto/pull/12"
+          },
+          {
+            "repoUrl": "github.com/acme/other",
+            "branch": "cursor/other",
+            "prUrl": "https://github.com/acme/other/pull/3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "run-creating",
+      "agentId": "bc-week",
+      "status": "CREATING",
+      "createdAt": "2026-10-09T12:00:00.000Z",
+      "updatedAt": "2026-10-09T12:00:00.000Z"
+    },
+    {
+      "id": "run-running",
+      "agentId": "bc-week",
+      "status": "RUNNING",
+      "createdAt": "2026-10-08T10:00:00.000Z",
+      "updatedAt": "2026-10-08T11:00:00.000Z"
+    },
+    {
+      "id": "run-error",
+      "agentId": "bc-week",
+      "status": "ERROR",
+      "createdAt": "2026-10-07T10:00:00.000Z",
+      "updatedAt": "2026-10-07T09:00:00.000Z",
+      "result": "assistant-result-must-not-be-stored"
+    },
+    {
+      "id": "run-cancel",
+      "agentId": "bc-week",
+      "status": "CANCELLED",
+      "createdAt": "2026-10-06T10:00:00.000Z",
+      "updatedAt": "2026-10-06T10:00:00.000Z",
+      "result": "assistant-result-must-not-be-stored"
+    },
+    {
+      "id": "run-since",
+      "agentId": "bc-week",
+      "status": "EXPIRED",
+      "createdAt": "2026-10-05T00:00:00.000Z",
+      "updatedAt": "2026-10-05T01:00:00.000Z",
+      "result": "assistant-result-must-not-be-stored"
+    },
+    {
+      "status": "FINISHED",
+      "createdAt": "2026-10-08T00:00:00.000Z",
+      "result": "assistant-result-must-not-be-stored"
+    }
+  ],
+  "nextCursor": "runs-2"
+}

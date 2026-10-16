@@ -13,7 +13,7 @@ weeklog searches these places, in order:
 1. The plugin directory. `$XDG_DATA_HOME/weeklog/plugins` when `XDG_DATA_HOME` is set. Otherwise `~/.local/share/weeklog/plugins` on Linux and macOS, or `%USERPROFILE%\AppData\Local\weeklog\plugins` on Windows.
 2. Each directory on `PATH`. Empty `PATH` entries are skipped.
 
-The first executable for a name wins. A later copy of the same name is ignored. A plugin whose name matches a built-in (`git`, `claude-code`, `codex`, `github`, `linear`) is ignored so it cannot replace the built-in.
+The first executable for a name wins. A later copy of the same name is ignored. A plugin whose name matches a built-in (`git`, `claude-code`, `codex`, `github`, `linear`, `cursor-cloud`) is ignored so it cannot replace the built-in.
 
 The file must be a regular file and, on Unix, executable. A matching file that is not executable is ignored.
 
@@ -155,7 +155,7 @@ Any other non-zero code is a failure. stderr is redacted, collapsed to one line,
 
 ## Built-in sources
 
-`git`, `claude-code`, `codex`, `github`, and `linear` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. The git collector reads commits from local repositories and describes version `0.1.0`. The claude-code collector reads local Claude Code session transcripts and describes version `0.1.0`. Its cursor records each transcript file's size and modification time. The codex collector reads local Codex rollout transcripts and describes version `0.1.0`. Its cursor records each rollout file's size and modification time. The github collector reads pull requests, reviews, and issues from the GitHub GraphQL API and describes version `0.1.0`. It uses the configured token, or `gh auth token` when the token is unset. It does not keep a cursor; the next collect reads the window again. The linear collector reads issues and state history from the Linear GraphQL API and describes version `0.1.0`. It uses the configured token. Keys that match `ticket_pattern` are stored on each event; when the pattern is omitted, the built-in ticket shape is used. It does not keep a cursor; the next collect reads the window again.
+`git`, `claude-code`, `codex`, `github`, `linear`, and `cursor-cloud` implement this protocol inside the weeklog process. `weeklog sources` and `weeklog doctor` describe them in process. The git collector reads commits from local repositories and describes version `0.1.0`. The claude-code collector reads local Claude Code session transcripts and describes version `0.1.0`. Its cursor records each transcript file's size and modification time. The codex collector reads local Codex rollout transcripts and describes version `0.1.0`. Its cursor records each rollout file's size and modification time. The github collector reads pull requests, reviews, and issues from the GitHub GraphQL API and describes version `0.1.0`. It uses the configured token, or `gh auth token` when the token is unset. It does not keep a cursor; the next collect reads the window again. The linear collector reads issues and state history from the Linear GraphQL API and describes version `0.1.0`. It uses the configured token. Keys that match `ticket_pattern` are stored on each event; when the pattern is omitted, the built-in ticket shape is used. It does not keep a cursor; the next collect reads the window again. The cursor-cloud collector reads Cloud Agent runs from `https://api.cursor.com` and describes version `0.1.0`. It uses the configured token. The calls are `GET /v1/me`, `GET /v1/agents`, and `GET /v1/agents/{id}/runs`. It does not call create, cancel, delete, secrets, repositories, usage, a single run, or the SSE stream, and it does not store assistant result text. It paces requests at 20 per minute. It does not keep a cursor; the next collect reads the window again. weeklog serves that collector as `weeklog-source-cursor-cloud`. A program of that name on `PATH` cannot replace it.
 
 | Name | Config |
 |---|---|
@@ -164,6 +164,7 @@ Any other non-zero code is a failure. stderr is redacted, collapsed to one line,
 | `codex` | none |
 | `github` | `token` (`secret`) |
 | `linear` | `token` (`secret`, required), `ticket_pattern` (`string`) |
+| `cursor-cloud` | `token` (`secret`, required) |
 
 ## Commands
 

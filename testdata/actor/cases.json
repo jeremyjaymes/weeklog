@@ -650,5 +650,83 @@
     "want_actor": "unknown",
     "want_evidence": "no-evidence",
     "events": []
+  },
+  {
+    "name": "cursor-cloud session linked to a commit",
+    "note": "A cursor-cloud session joined to a commit is Cloud agent. The cursor/ branch is a later rule.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "session-commit",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "title": "Add the gate",
+        "branch": "cursor/add-gate",
+        "reason": "files overlap: 2"
+      },
+      {
+        "kind": "agent_session",
+        "source": "cursor-cloud",
+        "title": "Add the gate",
+        "branch": "cursor/add-gate",
+        "reason": "files overlap: 2"
+      }
+    ]
+  },
+  {
+    "name": "cursor-cloud session with no commit",
+    "note": "A cursor-cloud session with no commit is Cloud agent. The source match is case-insensitive.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "session",
+    "events": [
+      {
+        "kind": "agent_session",
+        "source": "Cursor-Cloud",
+        "title": "Ship the follow-up",
+        "reason": "session only"
+      }
+    ]
+  },
+  {
+    "name": "trailer beats a cursor-cloud session",
+    "note": "A cursoragent trailer is the first rule. The linked cursor-cloud session does not change it.",
+    "want_actor": "cloud_agent",
+    "want_evidence": "co-authored-by",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "summary": "Fix\n\nCo-authored-by: Cursor <cursoragent@cursor.com>",
+        "reason": "sha:abc in pr"
+      },
+      {
+        "kind": "agent_session",
+        "source": "cursor-cloud",
+        "reason": "sha:abc in pr"
+      }
+    ]
+  },
+  {
+    "name": "cursor-cloud and codex sessions conflict",
+    "note": "A cursor-cloud session and a Codex session linked to the same commit are Unknown.",
+    "want_actor": "unknown",
+    "want_evidence": "conflict",
+    "events": [
+      {
+        "kind": "commit",
+        "source": "git",
+        "reason": "files overlap: 1"
+      },
+      {
+        "kind": "agent_session",
+        "source": "cursor-cloud",
+        "reason": "files overlap: 1"
+      },
+      {
+        "kind": "agent_session",
+        "source": "codex",
+        "reason": "files overlap: 1"
+      }
+    ]
   }
 ]

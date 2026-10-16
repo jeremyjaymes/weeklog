@@ -47,6 +47,11 @@ func builtinSchemas() map[string]sourceSchema {
 				"ticket_pattern": {Kind: fieldString},
 			},
 		},
+		"cursor-cloud": {
+			Fields: map[string]fieldSpec{
+				"token": {Kind: fieldSecret, Required: true},
+			},
+		},
 	}
 }
 
