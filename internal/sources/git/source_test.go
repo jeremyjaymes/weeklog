@@ -15,6 +15,20 @@ import (
 	"github.com/jeremyjaymes/weeklog/internal/source"
 )
 
+func TestLookupRemoteDashName(t *testing.T) {
+	repo := t.TempDir()
+	runGit(t, repo, nil, "init", "-b", "main")
+	runGit(t, repo, nil, "remote", "add", "--", "--push", "https://github.com/acme/dash.git")
+
+	got, err := lookupRemote(context.Background(), repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "https://github.com/acme/dash.git" {
+		t.Fatalf("remote = %q", got)
+	}
+}
+
 func TestCollectTempRepo(t *testing.T) {
 	root := t.TempDir()
 	repo := filepath.Join(root, "org", "otto")

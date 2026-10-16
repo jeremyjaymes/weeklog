@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -72,7 +73,9 @@ func ghAuthToken(ctx context.Context) (string, error) {
 	cmd.Env = append(os.Environ(), "GH_PROMPT_DISABLED=1", "GH_NO_UPDATE_NOTIFIER=1")
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
-	cmd.Stderr = nil
+	// nil would inherit the parent stderr. gh writes the token to stdout;
+	// anything it prints on stderr must not reach the terminal or a log.
+	cmd.Stderr = io.Discard
 	if err := cmd.Run(); err != nil {
 		return "", err
 	}

@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/jeremyjaymes/weeklog/internal/config"
+	"github.com/jeremyjaymes/weeklog/internal/redact"
 )
 
 // errFreezeNotInstalled is returned when --image cannot find the freeze command.
@@ -61,13 +62,20 @@ func writeRecapImage(ctx context.Context, path, body string) error {
 			return fmt.Errorf("image directory: %w", err)
 		}
 	}
-	cmd := exec.CommandContext(ctx, bin, "--config", "base", "--language", "ansi", "--output", path)
+	if err := prepareImagePath(path); err != nil {
+		return err
+	}
+	// Bind the path to the flag. A separate argv that starts with "-"
+	// (for example -week.png) would be parsed as another freeze option.
+	cmd := exec.CommandContext(ctx, bin, "--config", "base", "--language", "ansi", "--output="+path)
 	cmd.Stdin = strings.NewReader(body)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		detail := freezeOutput(stdout.String(), stderr.String())
+		// freeze can echo a slice of the recap. The recap is already rendered
+		// from stored text; this pass catches a token shape in that echo.
+		detail := redact.Default().Text(freezeOutput(stdout.String(), stderr.String()))
 		if detail == "" {
 			return fmt.Errorf("freeze: %w", err)
 		}
@@ -79,6 +87,30 @@ func writeRecapImage(ctx context.Context, path, body string) error {
 	}
 	if info.IsDir() || info.Size() == 0 {
 		return fmt.Errorf("freeze wrote an empty file: %s", path)
+	}
+	return nil
+}
+
+// prepareImagePath rejects a directory and replaces a symlink with the
+// file freeze is about to create. Opening the path would follow the link
+// and truncate whatever it names. The weekly Markdown writer uses rename,
+// which replaces the directory entry instead of following it.
+func prepareImagePath(path string) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("image path: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 {
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("image path: %w", err)
+		}
+		return nil
+	}
+	if info.IsDir() {
+		return fmt.Errorf("image path is a directory: %s", path)
 	}
 	return nil
 }
