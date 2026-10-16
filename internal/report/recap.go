@@ -10,9 +10,9 @@ import (
 )
 
 // Recap is the terminal view of one week. RenderRecap draws it. The Markdown
-// and JSON reports stay on Report; this value is not part of those documents.
+// and JSON reports stay on Report. Delta.Line is the same text as
+// Report.DeltaLine.
 //
-// Delta is an optional panel. It stays nil until a later change fills it.
 // Graph is filled from linker work items when those items are passed to
 // BuildRecap. RenderRecap reserves both places:
 //
@@ -67,7 +67,8 @@ type PRStat struct {
 	When   time.Time
 }
 
-// Delta is the week-over-week comparison. Issue 55 sets it.
+// Delta is the week-over-week comparison for an ISO week. BuildRecap sets it
+// from stored events. Nil when the window is not an ISO week.
 type Delta struct {
 	// Line is the short comparison, already formatted.
 	Line string
@@ -131,9 +132,11 @@ var extraLaneColors = []string{
 }
 
 // BuildRecap summarizes rep and the stored events that fall in its window.
-// Events outside [Since, Until) are ignored. loc buckets events onto days;
-// nil means UTC. items are the linker's work items. A nil or empty list
-// leaves the session chain hidden.
+// Events outside [Since, Until) are ignored for the day bars, lanes,
+// repositories, and pull requests. The week-over-week line still reads the
+// previous ISO week from the same events. loc buckets events onto days; nil
+// means UTC. items are the linker's work items. A nil or empty list leaves
+// the session chain hidden.
 func BuildRecap(rep Report, events []store.Record, items []store.WorkItem, loc *time.Location) Recap {
 	if loc == nil {
 		loc = time.UTC
@@ -209,6 +212,9 @@ func BuildRecap(rep Report, events []store.Record, items []store.WorkItem, loc *
 	}
 	if g := buildSessionGraph(items, events, rep.Since, rep.Until); g != nil {
 		recap.Graph = g
+	}
+	if line := deltaLine(events, rep.Since, rep.Until, loc); line != "" {
+		recap.Delta = &Delta{Line: line}
 	}
 	return recap
 }

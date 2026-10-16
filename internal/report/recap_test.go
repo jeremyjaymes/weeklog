@@ -30,6 +30,7 @@ func TestRecapGolden(t *testing.T) {
 		"Week 2026-W41 (Oct 5 – Oct 11)",
 		"Shipped 2 · In progress 1 · Explored 1 · Abandoned 1",
 		"~2h15m agent time · 5 commits · 1 PR merged",
+		"↑ 1 PR merged · ↑ 3 repos touched · ↑ 2 sessions vs last week",
 		"Claude Code",
 		"Codex",
 		"Git",
@@ -84,8 +85,9 @@ func TestPlainReportGolden(t *testing.T) {
 func TestRecapExtensionSlots(t *testing.T) {
 	recap := goldenRecap(t)
 	plain := RenderRecap(recap, RenderOptions{Color: false})
-	if strings.Contains(plain, "vs last week") {
-		t.Fatalf("delta slot was drawn\n%s", plain)
+	const wantDelta = "↑ 1 PR merged · ↑ 3 repos touched · ↑ 2 sessions vs last week"
+	if !strings.Contains(plain, wantDelta) {
+		t.Fatalf("delta missing\n%s", plain)
 	}
 	if !strings.Contains(plain, "Session chain") || !strings.Contains(plain, "ref:GEN-341 in prompt") {
 		t.Fatalf("linker graph missing from the plain recap\n%s", plain)
@@ -237,7 +239,7 @@ func TestEmptyRecap(t *testing.T) {
 		Summary: Summary{Line: "**Shipped 0 · In progress 0 · Explored 0** · ~0m agent time · 0 commits · 0 PRs merged"},
 	}
 	plain := RenderRecap(BuildRecap(rep, nil, nil, time.UTC), RenderOptions{Color: false})
-	for _, want := range []string{"No source activity", "No repositories", "No pull requests", "Shipped 0"} {
+	for _, want := range []string{"No source activity", "No repositories", "No pull requests", "Shipped 0", "No prior week to compare"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("missing %q\n%s", want, plain)
 		}

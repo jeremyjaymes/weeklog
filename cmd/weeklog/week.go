@@ -54,6 +54,12 @@ Chains that do not fit collapse to a "+N more" row. --no-graph hides the
 chain. With color off, the plain recap draws the same chain and the same
 marks, with no ANSI.
 
+Under the summary, an ISO week compares PRs merged, repositories touched,
+and agent sessions with the previous ISO week. The counts are stored
+events. A previous week with no stored events says there is nothing to
+compare. The Markdown report includes that line, including --plain and a
+saved file. A window that is not an ISO week omits it.
+
 Each item is tagged with an actor: Human, Claude, Codex, Cloud agent, or
 Unknown. The actor comes from a Co-authored-by trailer, a session linked to
 a commit, the session source when the item has no commit, or an agent branch

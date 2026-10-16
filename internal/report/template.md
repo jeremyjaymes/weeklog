@@ -7,6 +7,9 @@ weeklog_version: {{.Version}}
 # {{.Heading}}
 
 {{.Summary.Line}}
+{{- if .DeltaLine}}
+{{.DeltaLine}}
+{{- end}}
 {{- if .Summary.ActorLine}}
 {{.Summary.ActorLine}}
 {{- end}}

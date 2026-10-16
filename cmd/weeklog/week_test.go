@@ -24,7 +24,7 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--interactive", "--json", "--out", "--save", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/", "scrollable timeline", "Overwrite policy", "~/.weeklog/weeks"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--interactive", "--json", "--out", "--save", "--db", "previous full week", "previous ISO week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/", "scrollable timeline", "Overwrite policy", "~/.weeklog/weeks"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}
@@ -895,6 +895,124 @@ func TestWeekRecapShowsGraph(t *testing.T) {
 	}
 	if strings.Contains(stdout, "Session chain") || strings.Contains(stdout, "\x1b") || !strings.Contains(stdout, "# Week 2026-W41") {
 		t.Fatalf("plain = %s", stdout)
+	}
+}
+
+func TestWeekDeltaInStyledPlainAndFile(t *testing.T) {
+	const (
+		compared = "↓ 1 PR merged · ↑ 1 repo touched · ↑ 1 session vs last week"
+		missing  = "No prior week to compare"
+	)
+	setTerminal(t, true)
+	home := isolatePlugins(t)
+	dir := filepath.Join(home, "journal")
+	cfgPath := writeWeekConfigMode(t, home, dir, "both")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedDeltaWeekDB(t, dbPath, true)
+
+	assertWeekDelta(t, cfgPath, dbPath, dir, compared)
+
+	home = isolatePlugins(t)
+	dir = filepath.Join(home, "journal")
+	cfgPath = writeWeekConfigMode(t, home, dir, "both")
+	dbPath = filepath.Join(home, "weeklog.db")
+	seedDeltaWeekDB(t, dbPath, false)
+	assertWeekDelta(t, cfgPath, dbPath, dir, missing)
+}
+
+func assertWeekDelta(t *testing.T, cfgPath, dbPath, dir, want string) {
+	t.Helper()
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath)
+	if err != nil {
+		t.Fatalf("week: %v\n%s\n%s", err, stdout, stderr)
+	}
+	plain := stripANSI(stdout)
+	if !strings.Contains(plain, want) || !strings.Contains(stdout, "\x1b[") || !strings.Contains(stdout, "╭") {
+		t.Fatalf("styled recap missing %q\n%s", want, plain)
+	}
+	deltaAt := strings.Index(plain, want)
+	daysAt := strings.Index(plain, "Days")
+	if deltaAt < 0 || daysAt < 0 || deltaAt > daysAt {
+		t.Fatalf("delta sits outside the summary\n%s", plain)
+	}
+	saved, err := os.ReadFile(filepath.Join(dir, "2026-W41.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(saved), want) || strings.Contains(string(saved), "\x1b") {
+		t.Fatalf("saved file missing %q\n%s", want, saved)
+	}
+
+	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--plain")
+	if err != nil {
+		t.Fatalf("plain: %v\n%s\n%s", err, stdout, stderr)
+	}
+	if strings.Contains(stdout, "\x1b") || !strings.Contains(stdout, want) || !strings.Contains(stdout, "# Week 2026-W41") {
+		t.Fatalf("plain = %s", stdout)
+	}
+	saved, err = os.ReadFile(filepath.Join(dir, "2026-W41.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(saved), want) {
+		t.Fatalf("saved file after --plain missing %q\n%s", want, saved)
+	}
+}
+
+func seedDeltaWeekDB(t *testing.T, path string, prior bool) {
+	t.Helper()
+	st, err := store.Open(context.Background(), path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := st.Close(); err != nil {
+			t.Errorf("close: %v", err)
+		}
+	}()
+	events := []event.Event{
+		{
+			Source: "github", SourceID: "acme/app#8", Kind: event.KindPR,
+			TS: time.Date(2026, 10, 8, 16, 0, 0, 0, time.UTC), Title: "Add the gate",
+			State: event.StateMerged, Repo: "github.com/acme/app",
+		},
+		{
+			Source: "claude-code", SourceID: "sess-now", Kind: event.KindAgentSession,
+			TS: time.Date(2026, 10, 8, 14, 0, 0, 0, time.UTC), Title: "Add the gate",
+			Repo: "github.com/acme/other",
+		},
+		{
+			Source: "codex", SourceID: "sess-now-2", Kind: event.KindAgentSession,
+			TS: time.Date(2026, 10, 9, 14, 0, 0, 0, time.UTC), Title: "Follow up",
+			Repo: "github.com/acme/third",
+		},
+		{
+			Source: "git", SourceID: strings.Repeat("a", 40), Kind: event.KindCommit,
+			TS: time.Date(2026, 9, 20, 12, 0, 0, 0, time.UTC), Title: "Two weeks ago",
+			Repo: "github.com/acme/ancient",
+		},
+	}
+	if prior {
+		events = append(events,
+			event.Event{
+				Source: "github", SourceID: "acme/app#1", Kind: event.KindPR,
+				TS: time.Date(2026, 10, 1, 16, 0, 0, 0, time.UTC), Title: "Earlier",
+				State: event.StateMerged, Repo: "github.com/acme/app",
+			},
+			event.Event{
+				Source: "github", SourceID: "acme/old#2", Kind: event.KindPR,
+				TS: time.Date(2026, 10, 2, 16, 0, 0, 0, time.UTC), Title: "Also earlier",
+				State: event.StateMerged, Repo: "github.com/acme/old",
+			},
+			event.Event{
+				Source: "codex", SourceID: "sess-then", Kind: event.KindAgentSession,
+				TS: time.Date(2026, 10, 3, 12, 0, 0, 0, time.UTC), Title: "Earlier session",
+				Repo: "github.com/acme/app",
+			},
+		)
+	}
+	if _, err := st.UpsertEvents(context.Background(), events); err != nil {
+		t.Fatal(err)
 	}
 }
 
