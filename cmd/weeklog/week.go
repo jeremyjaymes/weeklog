@@ -99,8 +99,22 @@ sessions the linker attached. The stored reason is dimmed, with * for a
 hard link and o for a soft link, in the same colors as the recap. j and k
 move, esc or h steps back, and q or ctrl+c quits and restores the terminal.
 Esc from the day list also quits. -i does not write a file and ignores
-output.mode. It cannot be combined with --md, --plain, --json, --out, or
---save. --no-graph applies only to the recap.
+output.mode. It cannot be combined with --md, --plain, --json, --out,
+--save, or --image. --no-graph applies only to the recap.
+
+--image FILE writes a PNG or SVG of the styled recap. FILE must end in .png
+or .svg. An existing file is overwritten. The picture uses the default recap
+width and stays colored when the text report does not: a pipe, NO_COLOR,
+--plain, and --md still choose the text, and the image is the colored recap.
+--no-graph hides the chain in the image. --image cannot be combined with -i.
+The text report is still printed or saved as usual.
+
+The image is produced by the freeze command from charmbracelet/freeze.
+That project keeps the screenshot renderer in the freeze program, so weeklog
+runs the binary instead of importing a library. When freeze is not on PATH,
+the command stops before writing the report and prints how to install it
+(go install github.com/charmbracelet/freeze@latest, or
+brew install charmbracelet/tap/freeze).
 
 The database is the same file weeklog collect uses. --db selects another file.
 Run weeklog collect first so the week has events to render.`,
@@ -113,7 +127,9 @@ Run weeklog collect first so the week has events to render.`,
   weeklog week --json
   weeklog week --save
   weeklog week --week 2026-W41 --save
-  weeklog week --out ~/journal/weeklog/2026-W41.md`,
+  weeklog week --out ~/journal/weeklog/2026-W41.md
+  weeklog week --image recap.png
+  weeklog week --week 2026-W41 --image recap.svg`,
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
 		RunE:         runWeek,
@@ -126,6 +142,7 @@ Run weeklog collect first so the week has events to render.`,
 	cmd.Flags().Bool("no-graph", false, "hide the session chain in the recap")
 	cmd.Flags().BoolP("interactive", "i", false, "open a scrollable timeline instead of printing the report")
 	cmd.Flags().Bool("json", false, "write JSON")
+	cmd.Flags().String("image", "", "write a PNG or SVG of the styled recap with the freeze command")
 	cmd.Flags().String("out", "", "write to this file instead of output.dir or standard output")
 	cmd.Flags().Bool("save", false, "write the weekly file (output.dir, or ~/.weeklog/weeks)")
 	cmd.Flags().String("db", "", "SQLite database (default is the weeklog data directory)")
@@ -159,6 +176,10 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	imageFlag, err := cmd.Flags().GetString("image")
+	if err != nil {
+		return err
+	}
 	if interactive {
 		outFlag, err := cmd.Flags().GetString("out")
 		if err != nil {
@@ -179,6 +200,8 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 			return errors.New("pass either --interactive or --out")
 		case save:
 			return errors.New("pass either --interactive or --save")
+		case strings.TrimSpace(imageFlag) != "":
+			return errors.New("pass either --interactive or --image")
 		}
 	}
 	flag, err := cmd.Root().PersistentFlags().GetString("config")
@@ -220,6 +243,16 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	window, err := linkWindow(week, since, until, loc, weekStart)
 	if err != nil {
 		return err
+	}
+	var imagePath string
+	if strings.TrimSpace(imageFlag) != "" {
+		imagePath, err = recapImagePath(imageFlag)
+		if err != nil {
+			return err
+		}
+		if err := requireFreeze(); err != nil {
+			return err
+		}
 	}
 	dbFlag, err := cmd.Flags().GetString("db")
 	if err != nil {
@@ -265,6 +298,15 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	if interactive {
 		return runInteractiveWeek(cmd, ctx, rep, loc)
 	}
+	if imagePath != "" {
+		body, err := renderStyledRecap(ctx, st, rep, loc, report.DefaultRecapWidth, noGraph)
+		if err != nil {
+			return err
+		}
+		if err := writeRecapImage(ctx, imagePath, body); err != nil {
+			return err
+		}
+	}
 
 	ext := ".md"
 	if asJSON {
@@ -304,14 +346,19 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	}
 	switch plan.status {
 	case statusWrote:
-		_, err = fmt.Fprintf(out, "wrote %s\n", plan.path)
-		return err
+		if _, err := fmt.Fprintf(out, "wrote %s\n", plan.path); err != nil {
+			return err
+		}
 	case statusSaved:
-		_, err = fmt.Fprint(out, formatSavedLine(plan.path, colorSavedLine(plain, term)))
-		return err
-	default:
-		return nil
+		if _, err := fmt.Fprint(out, formatSavedLine(plan.path, colorSavedLine(plain, term))); err != nil {
+			return err
+		}
 	}
+	if imagePath != "" {
+		_, err = fmt.Fprintf(out, "wrote %s\n", imagePath)
+		return err
+	}
+	return nil
 }
 
 func runInteractiveWeek(cmd *cobra.Command, ctx context.Context, rep report.Report, loc *time.Location) error {
@@ -327,21 +374,10 @@ func runInteractiveWeek(cmd *cobra.Command, ctx context.Context, rep report.Repo
 
 func printWeekReport(out io.Writer, ctx context.Context, st *store.Store, rep report.Report, loc *time.Location, plain, md, noGraph bool, templatePath string) error {
 	if styledRecap(out, plain, md, templatePath) {
-		events, err := st.ListEvents(ctx)
+		body, err := renderStyledRecap(ctx, st, rep, loc, terminalWidth(out), noGraph)
 		if err != nil {
 			return err
 		}
-		var items []store.WorkItem
-		if !noGraph {
-			items, err = st.ListWorkItems(ctx)
-			if err != nil {
-				return err
-			}
-		}
-		body := report.RenderRecap(report.BuildRecap(rep, events, items, loc), report.RenderOptions{
-			Width: terminalWidth(out),
-			Color: true,
-		})
 		_, err = fmt.Fprint(out, body)
 		return err
 	}
@@ -501,6 +537,27 @@ func reportTemplate(cfg *config.Config) (string, error) {
 		return path, nil
 	}
 	return filepath.Join(cfg.Dir, path), nil
+}
+
+// renderStyledRecap draws the colored recap. width is the lipgloss content
+// width. noGraph omits the session chain. Color stays on so an image export
+// is still styled when the text report is Markdown.
+func renderStyledRecap(ctx context.Context, st *store.Store, rep report.Report, loc *time.Location, width int, noGraph bool) (string, error) {
+	events, err := st.ListEvents(ctx)
+	if err != nil {
+		return "", err
+	}
+	var items []store.WorkItem
+	if !noGraph {
+		items, err = st.ListWorkItems(ctx)
+		if err != nil {
+			return "", err
+		}
+	}
+	return report.RenderRecap(report.BuildRecap(rep, events, items, loc), report.RenderOptions{
+		Width: width,
+		Color: true,
+	}), nil
 }
 
 // styledRecap reports whether stdout should be the colored recap.

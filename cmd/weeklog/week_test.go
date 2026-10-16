@@ -24,7 +24,7 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--interactive", "--json", "--out", "--save", "--db", "previous full week", "previous ISO week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/", "scrollable timeline", "Overwrite policy", "~/.weeklog/weeks"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--interactive", "--json", "--image", "--out", "--save", "--db", "previous full week", "previous ISO week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/", "scrollable timeline", "Overwrite policy", "~/.weeklog/weeks", ".png", ".svg", "github.com/charmbracelet/freeze", "go install github.com/charmbracelet/freeze@latest"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}
@@ -55,6 +55,7 @@ func TestWeekInteractiveNeedsTerminal(t *testing.T) {
 		{"--plain"},
 		{"--out", filepath.Join(home, "out.md")},
 		{"--save"},
+		{"--image", filepath.Join(home, "recap.png")},
 	} {
 		cmdArgs := append([]string{"--config", cfgPath, "week", "-i"}, args...)
 		_, stderr, err = runWeeklog(t, cmdArgs...)

@@ -56,7 +56,7 @@ type = "claude-code"
 
 `config check` reports whether each secret reference resolved and does not print the value. `sources` lists built-in collectors and plugins after a protocol `describe` check. `collect` reads the previous full week in the configured timezone, stores the events, and runs the linker. `week` prints a boxed recap on a terminal. When `output.dir` is set and stdout is a terminal, the default `output.mode` of `both` also writes `<output.dir>/<year>-W<week>.md` and prints a dim line naming that file. `--save` writes that file when `output.dir` is unset, at `~/.weeklog/weeks/<year>-W<week>.md`, and also when `output.mode` is `terminal`. The file is replaced on the next run. An existing file is not skipped. Text between `<!-- weeklog:notes -->` markers is kept.
 
-`--week 2026-W41` selects an ISO week on both `collect` and `week`. `weeklog week --out -` prints the report to standard output: a boxed recap on a terminal, and Markdown when the output is a pipe, when `NO_COLOR` is set, or when `--plain` is set. `output.mode` is `both`, `file`, or `terminal`. `weeklog week --json` prints the same report as JSON.
+`--week 2026-W41` selects an ISO week on both `collect` and `week`. `weeklog week --out -` prints the report to standard output: a boxed recap on a terminal, and Markdown when the output is a pipe, when `NO_COLOR` is set, or when `--plain` is set. `output.mode` is `both`, `file`, or `terminal`. `weeklog week --json` prints the same report as JSON. `weeklog week --image recap.png` (or `.svg`) writes that styled recap as an image. The image needs the [`freeze`](https://github.com/charmbracelet/freeze) command on `PATH`.
 
 ## Config
 
@@ -550,7 +550,20 @@ On a terminal, the command prints a boxed recap: a bar for each day, a colored l
 
 Under the summary, an ISO week adds one line comparing PRs merged, repositories touched, and agent sessions with the previous ISO week. Those counts are read from stored events. When the previous week has no stored events, the line says there is nothing to compare. The same line is in the Markdown report, so `--plain` and a saved file show it. A window that is not an ISO week omits the line.
 
-`-i` opens a scrollable timeline instead of printing or writing the report. The week is one row per day. Enter opens that day's items, and enter again opens the commits, pull requests, and sessions the linker attached. The stored reason is dimmed, with `*` for a hard link and `o` for a soft link, using the same colors as the recap. `q`, ctrl+c, or esc from the day list quits and restores the terminal. `-i` ignores `output.mode` and cannot be combined with `--md`, `--plain`, `--json`, `--out`, or `--save`.
+`weeklog week --image FILE` writes that styled recap as a PNG or an SVG for sharing. `FILE` must end in `.png` or `.svg`, and an existing file is overwritten. The image uses the default recap width. It stays colored when the text report is Markdown, including a pipe, `NO_COLOR`, `--plain`, and `--md`. `--no-graph` hides the session chain in the image as well. `-i` cannot be combined with `--image`. The text report is still printed or saved.
+
+weeklog renders the image with the [`freeze`](https://github.com/charmbracelet/freeze) command. freeze keeps its screenshot renderer in the program itself, so weeklog runs that binary instead of importing a library. Install `freeze`, then export the week:
+
+```bash
+go install github.com/charmbracelet/freeze@latest
+# or: brew install charmbracelet/tap/freeze
+weeklog week --image ~/journal/weeklog/2026-W41.png
+weeklog week --week 2026-W41 --no-graph --image recap.svg
+```
+
+When `freeze` is not on `PATH`, weeklog stops before writing the report and prints those install commands.
+
+`-i` opens a scrollable timeline instead of printing or writing the report. The week is one row per day. Enter opens that day's items, and enter again opens the commits, pull requests, and sessions the linker attached. The stored reason is dimmed, with `*` for a hard link and `o` for a soft link, using the same colors as the recap. `q`, ctrl+c, or esc from the day list quits and restores the terminal. `-i` ignores `output.mode` and cannot be combined with `--md`, `--plain`, `--json`, `--out`, `--save`, or `--image`.
 
 When `output.dir` is set, stdout is a terminal, and `--out` is omitted, `output.mode` `both` (the default) writes `<output.dir>/<week>.md` and still prints that recap, then a dim line such as `saved ~/…/2026-W42.md`. A pipe writes the file and prints where it was written. `file` writes the file and does not print the recap. `terminal` prints the report and does not write a file. `--out FILE` and `--out -` ignore `output.mode`. Without `output.dir`, the report is printed to the terminal.
 
@@ -565,6 +578,8 @@ weeklog week --save
 weeklog week --week 2026-W41 --save
 weeklog week --no-graph
 weeklog week --json
+weeklog week --image recap.png
+weeklog week --week 2026-W41 --image recap.svg
 weeklog week --out ~/journal/weeklog/2026-W41.md
 ```
 
