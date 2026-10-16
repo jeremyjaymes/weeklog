@@ -47,6 +47,47 @@ func TestWeekImageWritesStyledRecap(t *testing.T) {
 	}
 }
 
+func TestWeekImageReplacesSymlinkAndRejectsDirectory(t *testing.T) {
+	home := isolatePlugins(t)
+	writeFreezeStub(t, filepath.Join(home, "bin"))
+	cfgPath := writeWeekConfig(t, home, "")
+	dbPath := filepath.Join(home, "weeklog.db")
+	seedWeekDB(t, dbPath)
+
+	dirPath := filepath.Join(home, "recap.png")
+	if err := os.Mkdir(dirPath, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	_, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--image", dirPath)
+	if err == nil || !strings.Contains(err.Error(), "image path is a directory") {
+		t.Fatalf("err = %v\n%s", err, stderr)
+	}
+	info, err := os.Lstat(dirPath)
+	if err != nil || !info.IsDir() {
+		t.Fatalf("directory was replaced: %v", err)
+	}
+
+	target := filepath.Join(home, "secret.txt")
+	if err := os.WriteFile(target, []byte("keep-me"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(home, "out.png")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--image", link)
+	if err != nil {
+		t.Fatalf("symlink: %v\n%s\n%s", err, stdout, stderr)
+	}
+	if body := string(mustRead(t, target)); body != "keep-me" {
+		t.Fatalf("freeze followed the symlink: %q", body)
+	}
+	linkInfo, err := os.Lstat(link)
+	if err != nil || linkInfo.Mode()&os.ModeSymlink != 0 || !strings.Contains(string(mustRead(t, link)), "png") {
+		t.Fatalf("link info = %v, err = %v", linkInfo, err)
+	}
+}
+
 func TestWeekImageFreezeFailure(t *testing.T) {
 	home := isolatePlugins(t)
 	writeFreezeStub(t, filepath.Join(home, "bin"))
@@ -59,6 +100,9 @@ func TestWeekImageFreezeFailure(t *testing.T) {
 	stdout, stderr, err := runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--image", image)
 	if err == nil || !strings.Contains(err.Error(), "freeze blew up") {
 		t.Fatalf("err = %v\n%s", err, stderr)
+	}
+	if strings.Contains(err.Error(), "ghp_") || !strings.Contains(err.Error(), "[REDACTED:github-token]") {
+		t.Fatalf("freeze error leaked the token: %v", err)
 	}
 	if stdout != "" {
 		t.Fatalf("stdout = %q", stdout)
@@ -74,7 +118,7 @@ func TestWeekImageFreezeFailure(t *testing.T) {
 func assertFreezeCapture(t *testing.T, image string, wantChain bool) string {
 	t.Helper()
 	args := string(mustRead(t, image+".args"))
-	for _, want := range []string{"--config\nbase\n", "--language\nansi\n", "--output\n" + image + "\n"} {
+	for _, want := range []string{"--config\nbase\n", "--language\nansi\n", "--output=" + image + "\n"} {
 		if !strings.Contains(args, want) {
 			t.Fatalf("args missing %q\n%s", want, args)
 		}
@@ -110,10 +154,9 @@ out=""
 while [ "$#" -gt 0 ]; do
   printf '%s\n' "$1" >> "$HOME/freeze.args.tmp"
   case "$1" in
-    --output)
-      out="$2"
-      printf '%s\n' "$2" >> "$HOME/freeze.args.tmp"
-      shift 2
+    --output=*)
+      out="${1#--output=}"
+      shift
       ;;
     --language|--config)
       printf '%s\n' "$2" >> "$HOME/freeze.args.tmp"
@@ -130,7 +173,7 @@ if [ -z "$out" ]; then
   exit 2
 fi
 if [ "${WEEKLOG_TEST_FREEZE_FAIL:-}" != "" ]; then
-  printf '%s\n' "freeze blew up" >&2
+  printf '%s\n' "freeze blew up ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" >&2
   exit 1
 fi
 /bin/cat > "$out.stdin"

@@ -296,7 +296,9 @@ func lookupRemote(ctx context.Context, repo string) (string, error) {
 			break
 		}
 	}
-	raw, err := gitBytes(ctx, repo, "remote", "get-url", chosen)
+	// "--" keeps a remote name that starts with "-" from being read as a
+	// get-url option such as --push or --all.
+	raw, err := gitBytes(ctx, repo, "remote", "get-url", "--", chosen)
 	if err != nil {
 		return "", err
 	}
