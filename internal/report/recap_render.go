@@ -136,6 +136,10 @@ func layoutRecap(recap Recap, width int) [][]span {
 			lines = append(lines, []span{{text: truncate(text, width), color: colorDelta}})
 		}
 	}
+	if len(recap.Summary.Actors) > 0 {
+		lines = append(lines, nil)
+		lines = append(lines, actorSection(recap.Summary.Actors, width)...)
+	}
 	lines = append(lines, nil)
 	lines = append(lines, daySection(recap.Days, width)...)
 	lines = append(lines, nil)
@@ -149,6 +153,41 @@ func layoutRecap(recap Recap, width int) [][]span {
 	lines = append(lines, nil)
 	lines = append(lines, prSection(recap.PRs, width)...)
 	return lines
+}
+
+func actorSection(counts []ActorCount, width int) [][]span {
+	lines := [][]span{titleSpan("Actors")}
+	for _, count := range counts {
+		label := padRight(count.Label, recapLaneLabel) + " "
+		n := " " + padLeft(strconv.Itoa(count.Count), 3)
+		body := label
+		if utf8.RuneCountInString(body+n) > width {
+			room := width - utf8.RuneCountInString(n)
+			body = truncate(body, room)
+		}
+		lines = append(lines, []span{
+			{text: body, color: actorColor(count.ID), bold: true},
+			{text: n, color: colorMuted},
+		})
+	}
+	return lines
+}
+
+func actorColor(id string) string {
+	switch id {
+	case "human":
+		return "#E5E7EB"
+	case "claude":
+		return "#CC785C"
+	case "codex":
+		return "#10A37F"
+	case "cloud_agent":
+		return "#38BDF8"
+	case "unknown":
+		return colorMuted
+	default:
+		return "#F472B6"
+	}
 }
 
 func daySection(days []DayStat, width int) [][]span {

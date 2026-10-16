@@ -53,6 +53,14 @@ Chains that do not fit collapse to a "+N more" row. --no-graph hides the
 chain. With color off, the plain recap draws the same chain and the same
 marks, with no ANSI.
 
+Each item is tagged with an actor: Human, Claude, Codex, Cloud agent, or
+Unknown. The actor comes from a Co-authored-by trailer, a session linked to
+a commit, the session source when the item has no commit, or an agent branch
+prefix such as cursor/. A commit or pull request with no agent evidence is
+Human. Missing or conflicting evidence is Unknown. The recap and the
+Markdown summary count items per actor. --json includes actor and
+actor_evidence on each item. See docs/ATTRIBUTION.md.
+
 The Markdown report is printed instead when stdout is not a terminal, when
 NO_COLOR is set, or when --plain or --md is set. Pipes keep that Markdown.
 

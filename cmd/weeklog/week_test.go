@@ -24,7 +24,7 @@ func TestWeekHelp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("help: %v\n%s", err, stderr)
 	}
-	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain"} {
+	for _, want := range []string{"--week", "--since", "--until", "--md", "--plain", "--no-graph", "--json", "--out", "--db", "previous full week", "weeklog:notes", "15 minutes", "NO_COLOR", "output.mode", "both", "session chain", "actor_evidence", "cursor/"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("help missing %q\n%s", want, stdout)
 		}
@@ -60,6 +60,9 @@ func TestWeekMarkdownAndJSON(t *testing.T) {
 	}
 	if !strings.Contains(stdout, `"week": "2026-W41"`) || !strings.Contains(stdout, `"commits": 1`) {
 		t.Fatalf("json = %s", stdout)
+	}
+	if !strings.Contains(stdout, `"actor": "human"`) || !strings.Contains(stdout, `"actor_evidence": "human"`) {
+		t.Fatalf("json missing actor\n%s", stdout)
 	}
 
 	_, stderr, err = runWeeklog(t, "--config", cfgPath, "week", "--week", "2026-W41", "--db", dbPath, "--md", "--json")

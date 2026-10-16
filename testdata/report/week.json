@@ -14,6 +14,28 @@
     "agent_seconds": 8100,
     "commits": 5,
     "prs_merged": 1,
+    "actors": [
+      {
+        "id": "human",
+        "label": "Human",
+        "count": 2
+      },
+      {
+        "id": "claude",
+        "label": "Claude",
+        "count": 1
+      },
+      {
+        "id": "codex",
+        "label": "Codex",
+        "count": 1
+      },
+      {
+        "id": "cloud_agent",
+        "label": "Cloud agent",
+        "count": 1
+      }
+    ],
     "line": "**Shipped 2 · In progress 1 · Explored 1 · Abandoned 1** · ~2h15m agent time · 5 commits · 1 PR merged"
   },
   "sections": [
@@ -26,6 +48,8 @@
           "title": "Admin is_admin gate",
           "heading": "Admin is_admin gate — GEN-341",
           "status": "shipped",
+          "actor": "claude",
+          "actor_evidence": "session-commit",
           "repo": "github.com/acme/smilepostcards-laravel",
           "repo_name": "smilepostcards-laravel",
           "branch": "cursor/admin-gate",
@@ -42,6 +66,7 @@
             "ref:GEN-341 ticket"
           ],
           "bullets": [
+            "Actor: Claude · session-commit",
             "PR [#5](https://github.com/acme/smilepostcards-laravel/pull/5) merged Oct 8 · smilepostcards-laravel",
             "2 commits · 2 Claude Code sessions (1h40m)",
             "Linked by: `ref:GEN-341 in commit message`, `ref:GEN-341 in prompt`, `ref:GEN-341 in title`, `ref:GEN-341 ticket`"
@@ -51,6 +76,8 @@
           "title": "Bump version",
           "heading": "Bump version",
           "status": "shipped",
+          "actor": "human",
+          "actor_evidence": "human",
           "repo": "github.com/acme/zebra",
           "repo_name": "zebra",
           "branch": "main",
@@ -60,6 +87,7 @@
           "agent_seconds": 0,
           "estimate_seconds": 900,
           "bullets": [
+            "Actor: Human · human",
             "1 commit (~15m estimate) · zebra"
           ]
         }
@@ -74,6 +102,8 @@
           "title": "Retry webhook delivery",
           "heading": "Retry webhook delivery",
           "status": "in_progress",
+          "actor": "cloud_agent",
+          "actor_evidence": "branch",
           "repo": "github.com/acme/otto",
           "repo_name": "otto",
           "branch": "cursor/webhooks",
@@ -86,6 +116,7 @@
             "branch:cursor/webhooks"
           ],
           "bullets": [
+            "Actor: Cloud agent · branch",
             "PR [#12](https://github.com/acme/otto/pull/12) open Oct 9 · otto",
             "1 commit (~15m estimate)",
             "Linked by: `branch:cursor/webhooks`"
@@ -101,6 +132,8 @@
           "title": "Try Lob adapter spike",
           "heading": "Try Lob adapter spike",
           "status": "explored",
+          "actor": "codex",
+          "actor_evidence": "session",
           "repo": "github.com/acme/otto",
           "repo_name": "otto",
           "started": "2026-10-07T10:00:00Z",
@@ -109,6 +142,7 @@
           "agent_seconds": 2100,
           "estimate_seconds": 0,
           "bullets": [
+            "Actor: Codex · session",
             "1 Codex session (35m), no commits"
           ]
         }
@@ -122,6 +156,8 @@
           "title": "Revert \"ship the spike\"",
           "heading": "Revert \"ship the spike\"",
           "status": "abandoned",
+          "actor": "human",
+          "actor_evidence": "human",
           "repo": "github.com/acme/old",
           "repo_name": "old",
           "branch": "wip/old",
@@ -131,6 +167,7 @@
           "agent_seconds": 0,
           "estimate_seconds": 900,
           "bullets": [
+            "Actor: Human · human",
             "1 commit (~15m estimate) · old"
           ]
         }
