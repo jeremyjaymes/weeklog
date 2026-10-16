@@ -39,6 +39,13 @@ func TestGoldenWeek(t *testing.T) {
 	if !strings.Contains(md, "~2h15m agent time") || !strings.Contains(md, "5 commits") || !strings.Contains(md, "1 PR merged") {
 		t.Fatalf("summary = %s", rep.Summary.Line)
 	}
+	const wantDelta = "↑ 1 PR merged · ↑ 3 repos touched · ↑ 2 sessions vs last week"
+	if rep.DeltaLine != wantDelta || !strings.Contains(md, rep.Summary.Line+"\n"+wantDelta+"\n") {
+		t.Fatalf("delta = %q\n%s", rep.DeltaLine, md)
+	}
+	if !strings.Contains(string(js), `"delta": "`+wantDelta+`"`) {
+		t.Fatalf("json missing delta\n%s", js)
+	}
 	if !strings.Contains(md, "Actors · Human 2 · Claude 1 · Codex 1 · Cloud agent 1") {
 		t.Fatalf("missing actor counts\n%s", md)
 	}
@@ -75,6 +82,9 @@ func TestEmptyWeek(t *testing.T) {
 	if rep.Summary.Line != "**Shipped 0 · In progress 0 · Explored 0** · ~0m agent time · 0 commits · 0 PRs merged" {
 		t.Fatalf("line = %s", rep.Summary.Line)
 	}
+	if rep.DeltaLine != noPriorWeekLine {
+		t.Fatalf("delta = %q", rep.DeltaLine)
+	}
 	if len(rep.Sections) != 0 || len(rep.Other) != 0 {
 		t.Fatalf("sections=%d other=%d", len(rep.Sections), len(rep.Other))
 	}
@@ -84,6 +94,9 @@ func TestEmptyWeek(t *testing.T) {
 	}
 	if !strings.Contains(md, "week: 2026-W41\n") || !strings.Contains(md, "# Week 2026-W41 (Oct 5 – Oct 11)\n") {
 		t.Fatalf("markdown = %s", md)
+	}
+	if !strings.Contains(md, rep.Summary.Line+"\n"+noPriorWeekLine+"\n") {
+		t.Fatalf("markdown missing the empty-week delta\n%s", md)
 	}
 }
 
@@ -341,6 +354,9 @@ func TestYearBoundaryRange(t *testing.T) {
 	}
 	if rep.FileBase() != "2025-12-29--2026-01-05" {
 		t.Fatalf("file = %s", rep.FileBase())
+	}
+	if rep.DeltaLine != noPriorWeekLine {
+		t.Fatalf("delta = %q", rep.DeltaLine)
 	}
 }
 

@@ -7,6 +7,7 @@ weeklog_version: dev
 # Week 2026-W41 (Oct 5 – Oct 11)
 
 **Shipped 2 · In progress 1 · Explored 1 · Abandoned 1** · ~2h15m agent time · 5 commits · 1 PR merged
+↑ 1 PR merged · ↑ 3 repos touched · ↑ 2 sessions vs last week
 Actors · Human 2 · Claude 1 · Codex 1 · Cloud agent 1
 
 ## Shipped

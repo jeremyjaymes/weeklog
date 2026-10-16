@@ -22,8 +22,14 @@ type Report struct {
 	Heading     string    `json:"heading"`
 	Range       string    `json:"range"`
 	Summary     Summary   `json:"summary"`
-	Sections    []Section `json:"sections"`
-	Other       []Other   `json:"other"`
+	// DeltaLine is the week-over-week comparison for an ISO week: PRs merged,
+	// repositories touched, and agent sessions against the previous ISO week.
+	// Empty when the window is not an ISO week. Markdown prints it under the
+	// summary. A previous week with no stored events says there is nothing
+	// to compare. JSON omits the field when the line is empty.
+	DeltaLine string    `json:"delta,omitempty"`
+	Sections  []Section `json:"sections"`
+	Other     []Other   `json:"other"`
 	// OtherLine is the Markdown summary of Other. It is not repeated in JSON.
 	OtherLine string `json:"-"`
 	// Notes is the preserved manual block. It is Markdown-only.
@@ -220,6 +226,7 @@ func assemble(events []store.Record, items []store.WorkItem, opt Options) (Repor
 	rep.Summary = summarize(rep.Sections, events, opt.Since, opt.Until)
 	rep.Summary.Actors = actorCounts(rep.Sections)
 	rep.Summary.ActorLine = actorLine(rep.Summary.Actors)
+	rep.DeltaLine = deltaLine(events, rep.Since, rep.Until, loc)
 	return rep, nil
 }
 

@@ -33,7 +33,12 @@
 // and the pull request or issue it was linked to. The stored reason is dimmed. A
 // soft link is drawn with o and :, and a hard link with * and |. Long chains
 // collapse to a "+N more" row. The same panel is drawn when color is off.
-// Recap.Delta is an empty slot for a later week-over-week line.
+// Recap.Delta is the week-over-week line for an ISO week: PRs merged,
+// repositories touched, and agent sessions against the previous ISO week,
+// counted from stored events. Report.DeltaLine is that same line, printed
+// under the Markdown summary and included in a saved file. A previous week
+// with no stored events says there is nothing to compare. A window that is
+// not an ISO week leaves the line empty.
 //
 // The interactive browser is another view of the same report. BuildBrowser
 // groups items onto local days and keeps the linker-attached commits, pull
