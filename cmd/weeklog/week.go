@@ -66,7 +66,7 @@ The Markdown report is printed instead when stdout is not a terminal, when
 NO_COLOR is set, or when --plain or --md is set. Pipes keep that Markdown.
 
 With --out FILE, the report is written to FILE. "-" writes to standard
-output. --out ignores output.mode.
+output. --out ignores output.mode. --save cannot be combined with --out.
 
 Without --out, output.mode chooses the destination. both, the default,
 writes <output.dir>/<week>.md (or .json) and, when stdout is a terminal,
@@ -75,9 +75,16 @@ writes that file and prints where it was written. terminal prints the
 report and does not write a file. When output.dir is unset, the report is
 printed to standard output.
 
-Rewriting a Markdown file keeps the text between <!-- weeklog:notes -->
-markers. output.template selects a text/template; a relative path is resolved
-from the config file's directory. An empty template uses the built-in one.
+--save writes that same file when output.mode is terminal, and when
+output.dir is unset. The unset path is ~/.weeklog/weeks/<week>.md. An ISO
+week is named YYYY-Www, such as 2026-W41.md. --json writes <week>.json in
+that same directory. On a terminal, --save still prints the recap unless
+output.mode is file.
+
+Overwrite policy: every write replaces the weekly file. An existing file
+is not skipped. Text between <!-- weeklog:notes --> markers is kept.
+output.template selects a text/template; a relative path is resolved from
+the config file's directory. An empty template uses the built-in one.
 
 -i, or --interactive, opens a scrollable timeline on a terminal instead of
 printing or writing the report. The week is one row per day. Enter opens
@@ -86,8 +93,8 @@ sessions the linker attached. The stored reason is dimmed, with * for a
 hard link and o for a soft link, in the same colors as the recap. j and k
 move, esc or h steps back, and q or ctrl+c quits and restores the terminal.
 Esc from the day list also quits. -i does not write a file and ignores
-output.mode. It cannot be combined with --md, --plain, --json, or --out.
---no-graph applies only to the recap.
+output.mode. It cannot be combined with --md, --plain, --json, --out, or
+--save. --no-graph applies only to the recap.
 
 The database is the same file weeklog collect uses. --db selects another file.
 Run weeklog collect first so the week has events to render.`,
@@ -98,6 +105,8 @@ Run weeklog collect first so the week has events to render.`,
   weeklog week --plain
   weeklog week --no-graph
   weeklog week --json
+  weeklog week --save
+  weeklog week --week 2026-W41 --save
   weeklog week --out ~/journal/weeklog/2026-W41.md`,
 		Args:         cobra.NoArgs,
 		SilenceUsage: true,
@@ -112,6 +121,7 @@ Run weeklog collect first so the week has events to render.`,
 	cmd.Flags().BoolP("interactive", "i", false, "open a scrollable timeline instead of printing the report")
 	cmd.Flags().Bool("json", false, "write JSON")
 	cmd.Flags().String("out", "", "write to this file instead of output.dir or standard output")
+	cmd.Flags().Bool("save", false, "write the weekly file (output.dir, or ~/.weeklog/weeks)")
 	cmd.Flags().String("db", "", "SQLite database (default is the weeklog data directory)")
 	return cmd
 }
@@ -148,6 +158,10 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
+		save, err := cmd.Flags().GetBool("save")
+		if err != nil {
+			return err
+		}
 		switch {
 		case md:
 			return errors.New("pass either --interactive or --md")
@@ -157,6 +171,8 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 			return errors.New("pass either --interactive or --plain")
 		case strings.TrimSpace(outFlag) != "":
 			return errors.New("pass either --interactive or --out")
+		case save:
+			return errors.New("pass either --interactive or --save")
 		}
 	}
 	flag, err := cmd.Root().PersistentFlags().GetString("config")
@@ -211,6 +227,10 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	save, err := cmd.Flags().GetBool("save")
+	if err != nil {
+		return err
+	}
 	templatePath, err := reportTemplate(cfg)
 	if err != nil {
 		return err
@@ -246,7 +266,7 @@ func runWeek(cmd *cobra.Command, _ []string) error {
 	}
 	out := cmd.OutOrStdout()
 	term := detectTerminal(out)
-	plan, err := planWeekOutput(outFlag, cfg.Output.Dir, mode, rep.FileBase(), ext, term, asJSON)
+	plan, err := planWeekOutput(outFlag, cfg.Output.Dir, mode, rep.FileBase(), ext, term, asJSON, save)
 	if err != nil {
 		return err
 	}
@@ -360,14 +380,19 @@ type weekPlan struct {
 }
 
 // planWeekOutput chooses the file and the terminal text.
-// --out FILE and --out - win over output.mode. Without output.dir the report
-// is printed. mode file keeps the previous write-only behavior. mode terminal
-// prints and writes nothing. mode both writes the file and, on a terminal,
-// also prints the report plus a saved line. A pipe stays on the write-only
-// path so the Markdown file is not copied onto stdout. JSON has no recap, so
-// both writes the file and prints the wrote line.
-func planWeekOutput(outFlag, dir, mode, base, ext string, term, asJSON bool) (weekPlan, error) {
+// --out FILE and --out - win over output.mode. --save cannot be combined
+// with --out. Without output.dir the report is printed, unless --save is
+// set, which writes ~/.weeklog/weeks/<week>.md. mode file writes only.
+// mode terminal prints and writes nothing, unless --save is set. mode both
+// writes the file and, on a terminal, also prints the report plus a saved
+// line. A pipe stays on the write-only path so the Markdown file is not
+// copied onto stdout. JSON has no recap, so both writes the file and prints
+// the wrote line. --save with terminal mode still prints Markdown on a pipe.
+func planWeekOutput(outFlag, dir, mode, base, ext string, term, asJSON, save bool) (weekPlan, error) {
 	outFlag = strings.TrimSpace(outFlag)
+	if save && outFlag != "" {
+		return weekPlan{}, errors.New("pass either --save or --out")
+	}
 	switch {
 	case outFlag == "-":
 		return weekPlan{report: true}, nil
@@ -381,7 +406,15 @@ func planWeekOutput(outFlag, dir, mode, base, ext string, term, asJSON bool) (we
 		}
 		return weekPlan{path: path, status: statusWrote}, nil
 	}
-	if strings.TrimSpace(dir) == "" {
+	dir = strings.TrimSpace(dir)
+	if dir == "" && save {
+		fallback, err := defaultWeeksDir()
+		if err != nil {
+			return weekPlan{}, err
+		}
+		dir = fallback
+	}
+	if dir == "" {
 		return weekPlan{report: true}, nil
 	}
 	path := filepath.Join(dir, base+ext)
@@ -389,7 +422,16 @@ func planWeekOutput(outFlag, dir, mode, base, ext string, term, asJSON bool) (we
 	case config.OutputModeFile:
 		return weekPlan{path: path, status: statusWrote}, nil
 	case config.OutputModeTerminal:
-		return weekPlan{report: true}, nil
+		if !save {
+			return weekPlan{report: true}, nil
+		}
+		if asJSON {
+			return weekPlan{path: path, status: statusWrote}, nil
+		}
+		if term {
+			return weekPlan{path: path, report: true, status: statusSaved}, nil
+		}
+		return weekPlan{path: path, report: true}, nil
 	case config.OutputModeBoth:
 		if !term || asJSON {
 			return weekPlan{path: path, status: statusWrote}, nil
@@ -398,6 +440,16 @@ func planWeekOutput(outFlag, dir, mode, base, ext string, term, asJSON bool) (we
 	default:
 		return weekPlan{}, fmt.Errorf("invalid output.mode %s (use both, file, or terminal)", mode)
 	}
+}
+
+// defaultWeeksDir is where --save writes when output.dir is unset.
+// The path is ~/.weeklog/weeks. output.dir stays the only directory setting.
+func defaultWeeksDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("weeks directory: %w", err)
+	}
+	return filepath.Join(home, ".weeklog", "weeks"), nil
 }
 
 // formatSavedLine is the dim confirmation printed after the recap.
