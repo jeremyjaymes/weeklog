@@ -21,10 +21,11 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 
 From a checkout of this repository, `go install ./cmd/weeklog` writes the same binary to `$(go env GOPATH)/bin`.
 
-Release binaries are macOS and Linux only (`amd64` and `arm64`). There is no Windows archive. Download a tarball from the [releases page](https://github.com/jeremyjaymes/weeklog/releases). The current release is v0.2.0. Names look like `weeklog_0.2.0_darwin_arm64.tar.gz` and `weeklog_0.2.0_linux_amd64.tar.gz`.
+Release binaries are macOS and Linux only (`amd64` and `arm64`). There is no Windows archive. Download a tarball from the [latest release](https://github.com/jeremyjaymes/weeklog/releases/latest). Names are `weeklog_<version>_<os>_<arch>.tar.gz`: `<os>` is `darwin` or `linux`, and `<version>` is the release tag without the leading `v`. The example below uses the current release, v0.2.1.
 
 ```bash
-tar -xzf weeklog_0.2.0_linux_amd64.tar.gz
+VERSION=0.2.1
+tar -xzf "weeklog_${VERSION}_linux_amd64.tar.gz"
 install weeklog "$HOME/.local/bin"
 ```
 
