@@ -12,7 +12,7 @@
       "ts_end": "2026-10-08T15:00:00Z",
       "title": "Pay flow",
       "summary": "Run git checkout feature/pay before editing",
-      "cwd": "/Users/j/Projects/otto"
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 2,
@@ -23,7 +23,7 @@
       "ts_end": "2026-10-08T15:00:00Z",
       "title": "Look around",
       "summary": "Look around",
-      "cwd": "/Users/j/Projects/otto"
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 3,
@@ -32,9 +32,9 @@
       "kind": "commit",
       "ts": "2026-10-08T15:30:00Z",
       "title": "Handle pay",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "feature/pay",
-      "cwd": "/Users/j/Projects/otto"
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 4,
@@ -43,7 +43,7 @@
       "kind": "pr",
       "ts": "2026-10-08T16:00:00Z",
       "title": "Handle pay",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "feature/pay",
       "state": "open"
     }

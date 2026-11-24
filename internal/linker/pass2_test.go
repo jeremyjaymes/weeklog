@@ -25,7 +25,7 @@ func TestGitBranchFromText(t *testing.T) {
 		{text: "git status", want: ""},
 		{text: "git checkout HEAD", want: ""},
 		{text: "git checkout " + fullSHA, want: ""},
-		{text: "github.com/jeremyjaymes/otto", want: ""},
+		{text: "github.com/example/acme-app", want: ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.text, func(t *testing.T) {
@@ -142,9 +142,9 @@ func TestSoftFileOverlapJoinsHardGroup(t *testing.T) {
 			e.TSEnd = &end
 			e.CWD = cwdOtto
 			e.Files = []string{
-				"/Users/j/Projects/otto/app/Webhooks.php",
-				"/Users/j/Projects/otto/app/Retry.php",
-				"/Users/j/Projects/otto/README.md",
+				"/Users/me/Projects/acme-app/app/Webhooks.php",
+				"/Users/me/Projects/acme-app/app/Retry.php",
+				"/Users/me/Projects/acme-app/README.md",
 			}
 		}),
 		rec(3, event.KindCommit, "git", fullSHA, at(8, 15).Add(10*time.Minute), func(e *event.Event) {
@@ -700,7 +700,7 @@ func TestCWDSubdirectoryResolvesRepo(t *testing.T) {
 			e.Title = "Nested"
 			e.TSEnd = &end
 			e.CWD = cwdOtto + "/app"
-			e.Files = []string{"/Users/j/Projects/otto/app/a.go"}
+			e.Files = []string{"/Users/me/Projects/acme-app/app/a.go"}
 		}),
 		rec(2, event.KindCommit, "git", fullSHA, at(8, 12), func(e *event.Event) {
 			e.Title = "Touch a.go"

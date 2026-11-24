@@ -10,7 +10,7 @@
       "kind": "commit",
       "ts": "2026-10-04T00:00:00Z",
       "title": "Old experiment",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "experiment"
     }
   ],
@@ -23,7 +23,7 @@
         {
           "source": "git",
           "source_id": "0123456789abcdef0123456789abcdef01234567",
-          "reason": "leftover:github.com/jeremyjaymes/otto 2026-10-04",
+          "reason": "leftover:github.com/example/acme-app 2026-10-04",
           "because": "The commit has nothing to link to, so it is grouped by repository and day. October 4 is eight days before October 12."
         }
       ]

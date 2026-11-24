@@ -93,7 +93,7 @@ func TestCursorSkipsUnchangedFiles(t *testing.T) {
 		t.Fatalf("unchanged files outside the window were read: events=%d dropped=%d", len(quiet), quietResult.Dropped)
 	}
 
-	septPath := filepath.Join(dir, "projects", "-Users-j-Projects-otto", "22222222-2222-4222-8222-222222222222.jsonl")
+	septPath := filepath.Join(dir, "projects", "-Users-me-Projects-acme-app", "22222222-2222-4222-8222-222222222222.jsonl")
 	f, err := os.OpenFile(septPath, os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {
 		t.Fatal(err)

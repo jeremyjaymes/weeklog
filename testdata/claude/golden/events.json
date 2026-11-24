@@ -8,7 +8,7 @@
     "title": "Fix Stripe webhook retries",
     "summary": "Fix Stripe webhook retries",
     "branch": "cursor/fix-webhooks",
-    "cwd": "/Users/j/Projects/otto",
+    "cwd": "/Users/me/Projects/acme-app",
     "files": [
       "app/Webhooks.php",
       "app/retry.go",
@@ -19,7 +19,7 @@
       "tokens_in": 1350,
       "tokens_out": 505
     },
-    "body_ref": "/projects/-Users-j-Projects-otto/11111111-1111-4111-8111-111111111111.jsonl"
+    "body_ref": "/projects/-Users-me-Projects-acme-app/11111111-1111-4111-8111-111111111111.jsonl"
   },
   {
     "source": "claude-code",
@@ -30,7 +30,7 @@
     "title": "Try Lob adapter spike",
     "summary": "Try Lob adapter spike\n\nMore detail that stays in the summary.",
     "branch": "spike",
-    "cwd": "/Users/j/Projects/spike",
+    "cwd": "/Users/me/Projects/spike",
     "files": [
       "notes.ipynb",
       "adapter.go"
@@ -39,7 +39,7 @@
       "tokens_in": 10,
       "tokens_out": 4
     },
-    "body_ref": "/projects/-Users-j-Projects-spike/44444444-4444-4444-8444-444444444444.jsonl"
+    "body_ref": "/projects/-Users-me-Projects-spike/44444444-4444-4444-8444-444444444444.jsonl"
   },
   {
     "source": "claude-code",

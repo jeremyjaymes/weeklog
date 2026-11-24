@@ -14,9 +14,9 @@ import (
 const (
 	fullSHA   = "0123456789abcdef0123456789abcdef01234567"
 	otherSHA  = "fedcba9876543210fedcba9876543210fedcba98"
-	repoOtto  = "github.com/jeremyjaymes/otto"
-	repoOther = "github.com/jeremyjaymes/other"
-	cwdOtto   = "/Users/j/Projects/otto"
+	repoOtto  = "github.com/example/acme-app"
+	repoOther = "github.com/example/other"
+	cwdOtto   = "/Users/me/Projects/acme-app"
 	branchFix = "cursor/fix-webhooks"
 )
 

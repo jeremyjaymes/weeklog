@@ -11,7 +11,7 @@
       "ts": "2026-10-08T10:00:00Z",
       "ts_end": "2026-10-08T11:00:00Z",
       "title": "Poke around",
-      "cwd": "/Users/j/Projects/otto"
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 2,
@@ -20,8 +20,8 @@
       "kind": "commit",
       "ts": "2026-10-08T11:30:00Z",
       "title": "First note",
-      "repo": "github.com/jeremyjaymes/otto",
-      "cwd": "/Users/j/Projects/otto"
+      "repo": "github.com/example/acme-app",
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 3,
@@ -30,8 +30,8 @@
       "kind": "commit",
       "ts": "2026-10-08T12:00:00Z",
       "title": "Second note",
-      "repo": "github.com/jeremyjaymes/otto",
-      "cwd": "/Users/j/Projects/otto"
+      "repo": "github.com/example/acme-app",
+      "cwd": "/Users/me/Projects/acme-app"
     }
   ],
   "work_items": [

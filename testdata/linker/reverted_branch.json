@@ -10,7 +10,7 @@
       "kind": "commit",
       "ts": "2026-10-08T10:00:00Z",
       "title": "Try Lob adapter",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "experiment"
     },
     {
@@ -21,7 +21,7 @@
       "ts": "2026-10-08T12:00:00Z",
       "title": "Revert \"Try Lob adapter\"",
       "summary": "Revert \"Try Lob adapter\"\n\nThis reverts commit 0123456789abcdef0123456789abcdef01234567.",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "experiment",
       "refs": ["0123456789abcdef0123456789abcdef01234567"]
     }

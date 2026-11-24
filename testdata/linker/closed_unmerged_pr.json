@@ -10,7 +10,7 @@
       "kind": "commit",
       "ts": "2026-10-08T10:00:00Z",
       "title": "Spike",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "experiment"
     },
     {
@@ -20,7 +20,7 @@
       "kind": "pr",
       "ts": "2026-10-08T12:00:00Z",
       "title": "Try the spike",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "experiment",
       "state": "closed"
     }

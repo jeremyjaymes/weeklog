@@ -10,7 +10,7 @@
       "kind": "agent_session",
       "ts": "2026-10-08T10:00:00Z",
       "title": "Try Lob adapter spike",
-      "cwd": "/Users/j/Projects/otto"
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 2,
@@ -19,7 +19,7 @@
       "kind": "commit",
       "ts": "2026-10-08T11:00:00Z",
       "title": "Elsewhere",
-      "repo": "github.com/jeremyjaymes/other",
+      "repo": "github.com/example/other",
       "branch": "main",
       "cwd": "/tmp/other"
     }
@@ -34,7 +34,7 @@
           "source": "claude-code",
           "source_id": "sess-1",
           "reason": "session only",
-          "because": "No commit shares this session's repository. The other repo's checkout does not resolve the otto working directory."
+          "because": "No commit shares this session's repository. The other repo's checkout does not resolve the acme-app working directory."
         }
       ]
     },
@@ -46,7 +46,7 @@
         {
           "source": "git",
           "source_id": "0123456789abcdef0123456789abcdef01234567",
-          "reason": "leftover:github.com/jeremyjaymes/other 2026-10-08",
+          "reason": "leftover:github.com/example/other 2026-10-08",
           "because": "The commit is unlinked and is grouped by its own repository and day."
         }
       ]

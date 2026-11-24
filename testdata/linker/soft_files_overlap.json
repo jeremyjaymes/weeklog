@@ -1,6 +1,6 @@
 {
   "name": "soft file overlap joins a session to a hard-linked commit",
-  "note": "The session has no branch, so pass 1 leaves it out. Its working directory is the otto checkout, and two files also appear on the commit inside the session window. That soft link pulls the session into the commit's hard-linked pull request and ticket. The merged pull request marks the item shipped.",
+  "note": "The session has no branch, so pass 1 leaves it out. Its working directory is the acme-app checkout, and two files also appear on the commit inside the session window. That soft link pulls the session into the commit's hard-linked pull request and ticket. The merged pull request marks the item shipped.",
   "as_of": "2026-10-12T00:00:00Z",
   "events": [
     {
@@ -20,11 +20,11 @@
       "ts": "2026-10-08T14:00:00Z",
       "ts_end": "2026-10-08T15:40:00Z",
       "title": "look at webhooks",
-      "cwd": "/Users/j/Projects/otto",
+      "cwd": "/Users/me/Projects/acme-app",
       "files": [
-        "/Users/j/Projects/otto/app/Webhooks.php",
-        "/Users/j/Projects/otto/app/Retry.php",
-        "/Users/j/Projects/otto/README.md"
+        "/Users/me/Projects/acme-app/app/Webhooks.php",
+        "/Users/me/Projects/acme-app/app/Retry.php",
+        "/Users/me/Projects/acme-app/README.md"
       ]
     },
     {
@@ -34,9 +34,9 @@
       "kind": "commit",
       "ts": "2026-10-08T15:10:00Z",
       "title": "Fix retries",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "feature/pay",
-      "cwd": "/Users/j/Projects/otto",
+      "cwd": "/Users/me/Projects/acme-app",
       "files": ["app/Webhooks.php", "app/Retry.php"]
     },
     {
@@ -47,7 +47,7 @@
       "ts": "2026-10-08T16:00:00Z",
       "title": "Fix Stripe webhook retries",
       "summary": "Closes GEN-301",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "feature/pay",
       "state": "merged",
       "refs": ["0123456789abcdef0123456789abcdef01234567"]
@@ -69,7 +69,7 @@
           "source": "claude-code",
           "source_id": "sess-1",
           "reason": "files overlap: 2",
-          "because": "The session cwd resolves to otto. app/Webhooks.php and app/Retry.php also changed in the commit, which was authored before the session end plus two hours."
+          "because": "The session cwd resolves to acme-app. app/Webhooks.php and app/Retry.php also changed in the commit, which was authored before the session end plus two hours."
         },
         {
           "source": "git",
