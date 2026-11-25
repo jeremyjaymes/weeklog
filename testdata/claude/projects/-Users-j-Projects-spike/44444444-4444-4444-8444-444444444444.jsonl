@@ -1,5 +1,0 @@
-{"type":"user","timestamp":"2026-10-09T08:59:00Z","isMeta":true,"cwd":"/Users/j/Projects/spike","gitBranch":"","message":{"role":"user","content":"<command-name>/clear</command-name>"}}
-{"type":"user","timestamp":"2026-10-09T09:00:00Z","isSidechain":true,"cwd":"/Users/j/Projects/spike","message":{"role":"user","content":"sidechain prompt should not win"}}
-{"type":"user","timestamp":"2026-10-09T09:01:00Z","cwd":"/Users/j/Projects/spike","gitBranch":"spike","message":{"role":"user","content":"Try Lob adapter spike\n\nMore detail that stays in the summary."}}
-{"type":"assistant","timestamp":"2026-10-09T09:05:00Z","message":{"role":"assistant","content":[{"type":"tool_use","name":"NotebookEdit","input":{"notebook_path":"/Users/j/Projects/spike/notes.ipynb"}},{"type":"tool_use","name":"MultiEdit","input":{"file_path":"/Users/j/Projects/spike/adapter.go"}}],"usage":{"input_tokens":10,"output_tokens":4}}}
-{"type":"summary","summary":"A generated summary that is not the title"}

@@ -125,7 +125,7 @@ git/0123456789abcdef0123456789abcdef01234567
   kind: commit
   ts: 2026-10-09T15:00:00Z
   title: unrelated notes
-  reason: leftover:github.com/jeremyjaymes/otto 2026-10-09, override:link
+  reason: leftover:github.com/example/acme-app 2026-10-09, override:link
 ```
 
 `weeklog week` shows the same reasons, including `override:link` and `override:unlink`, in the item's `Linked by:` line, for both Markdown and JSON. The terminal recap also draws them on the session chain, dimmed under each session, commit, pull request, or issue. Soft-link reasons (`files overlap`, `git branch`, `head branch`, `only session in window`, `revert`) use `o` and `:`. Hard-link reasons use `*` and `|`. `--no-graph` hides that panel. A pipe, `NO_COLOR`, or `--plain` still prints the Markdown report. `weeklog week -i` opens the same week as a scrollable day list and drills from a day to an item to those linker-attached commits, pull requests, and sessions.

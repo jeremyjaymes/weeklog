@@ -93,7 +93,7 @@ func TestExplainLinkUnlink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("explain event: %v\n%s\n%s", err, stdout, stderr)
 	}
-	if !strings.Contains(stdout, "reason: leftover:github.com/jeremyjaymes/otto 2026-10-09") {
+	if !strings.Contains(stdout, "reason: leftover:github.com/example/acme-app 2026-10-09") {
 		t.Fatalf("stdout = %s", stdout)
 	}
 	stdout, stderr, err = runWeeklog(t, "--config", cfgPath, "explain", "git/"+explainOther, "--db", dbPath)
@@ -128,7 +128,7 @@ func TestExplainLinkUnlink(t *testing.T) {
 		"git/" + explainSHA,
 		"git/" + explainOther,
 		"reason: ref:GEN-301 ticket, override:link",
-		"reason: leftover:github.com/jeremyjaymes/otto 2026-10-09, override:link",
+		"reason: leftover:github.com/example/acme-app 2026-10-09, override:link",
 	} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("grouped explain missing %q\n%s", want, stdout)
@@ -304,13 +304,13 @@ func overrideEvents() []event.Event {
 			Source: "git", SourceID: explainSHA, Kind: event.KindCommit,
 			TS:    time.Date(2026, 10, 8, 15, 0, 0, 0, time.UTC),
 			Title: "ship GEN-301", Summary: "ship GEN-301",
-			Repo: "github.com/jeremyjaymes/otto", Branch: "main",
+			Repo: "github.com/example/acme-app", Branch: "main",
 		},
 		{
 			Source: "git", SourceID: explainOther, Kind: event.KindCommit,
 			TS:    time.Date(2026, 10, 9, 15, 0, 0, 0, time.UTC),
 			Title: "unrelated notes",
-			Repo:  "github.com/jeremyjaymes/otto", Branch: "main",
+			Repo:  "github.com/example/acme-app", Branch: "main",
 		},
 	}
 }

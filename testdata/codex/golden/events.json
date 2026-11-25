@@ -7,9 +7,9 @@
     "ts_end": "2026-10-08T15:40:00Z",
     "title": "Fix Stripe webhook retries",
     "summary": "Fix Stripe webhook retries",
-    "repo": "github.com/jeremyjaymes/otto",
+    "repo": "github.com/example/acme-app",
     "branch": "cursor/fix-webhooks",
-    "cwd": "/Users/j/Projects/otto",
+    "cwd": "/Users/me/Projects/acme-app",
     "files": [
       "app/Webhooks.php",
       "app/retry.go",
@@ -30,9 +30,9 @@
     "ts_end": "2026-10-09T09:05:00Z",
     "title": "Try Lob adapter spike",
     "summary": "Try Lob adapter spike\n\nMore detail that stays in the summary.",
-    "repo": "github.com/jeremyjaymes/spike",
+    "repo": "github.com/example/spike",
     "branch": "spike",
-    "cwd": "/Users/j/Projects/spike",
+    "cwd": "/Users/me/Projects/spike",
     "files": [
       "adapter.go",
       "notes.ipynb"

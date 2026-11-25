@@ -324,8 +324,8 @@ func TestNormalizeRemote(t *testing.T) {
 	cases := []struct {
 		in, want string
 	}{
-		{in: "git@github.com:jeremyjaymes/otto.git", want: "github.com/jeremyjaymes/otto"},
-		{in: "https://github.com/jeremyjaymes/spike.git", want: "github.com/jeremyjaymes/spike"},
+		{in: "git@github.com:example/acme-app.git", want: "github.com/example/acme-app"},
+		{in: "https://github.com/example/spike.git", want: "github.com/example/spike"},
 		{in: "https://user:s3cret-token@github.com/acme/edge.git", want: "github.com/acme/edge"},
 		{in: "https://GitHub.com/Owner/Repo.git", want: "github.com/Owner/Repo"},
 		{in: "/tmp/local", want: ""},

@@ -11,7 +11,7 @@
       "ts": "2026-10-08T14:00:00Z",
       "ts_end": "2026-10-08T15:30:00Z",
       "title": "Investigate pay",
-      "cwd": "/Users/j/Projects/otto"
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 2,
@@ -20,9 +20,9 @@
       "kind": "commit",
       "ts": "2026-10-08T15:00:00Z",
       "title": "Handle pay",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "feature/pay",
-      "cwd": "/Users/j/Projects/otto"
+      "cwd": "/Users/me/Projects/acme-app"
     },
     {
       "id": 3,
@@ -31,7 +31,7 @@
       "kind": "pr",
       "ts": "2026-10-08T16:00:00Z",
       "title": "Handle pay",
-      "repo": "github.com/jeremyjaymes/otto",
+      "repo": "github.com/example/acme-app",
       "branch": "feature/pay",
       "state": "open"
     }

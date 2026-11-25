@@ -74,9 +74,9 @@ Other addresses in fixtures are fictional (`alice@example.com`, `you@example.com
 
 ### Paths
 
-`/Users/j/Projects/otto` is the fixture home used by linker, store, Claude, and Codex testdata. The username is the single letter `j`. `/home/you` is the documented example in `docs/sources/codex.md` (and in older README revisions). No real home directory or machine hostname showed up. No `*.local` / `*.internal` host, and no RFC1918 address used as a machine.
+Fixture checkouts use `/Users/me/Projects/acme-app`. A second sample project uses `/Users/me/Projects/spike`. `/home/you` is the documented example in `docs/sources/codex.md` (and in older README revisions). No real home directory or machine hostname is in the tree. No `*.local` / `*.internal` host, and no RFC1918 address used as a machine.
 
-`github.com/JeremyJaymes/otto` is the remote in `internal/sources/git/source_test.go` and a few docs (`docs/LINKING.md`, `internal/redact/redact_test.go`). `gh repo view JeremyJaymes/otto` does not resolve to a repository. Most other fixtures use `acme/otto`. Left as-is; rewriting the fixture remote is not a docs-only change.
+Git, linker, and redaction fixtures use the remote `github.com/example/acme-app`. The spike sample uses `github.com/example/spike`, and the unrelated-repo case uses `github.com/example/other`. Most other fixtures use `acme/otto`.
 
 ## LICENSE and module path
 

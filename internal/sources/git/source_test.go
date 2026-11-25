@@ -36,7 +36,7 @@ func TestCollectTempRepo(t *testing.T) {
 		t.Fatal(err)
 	}
 	runGit(t, repo, nil, "init", "-b", "main")
-	runGit(t, repo, nil, "remote", "add", "origin", "git@github.com:JeremyJaymes/otto.git")
+	runGit(t, repo, nil, "remote", "add", "origin", "git@github.com:example/acme-app.git")
 
 	writeRepoFile(t, filepath.Join(repo, "old.txt"), "old\n")
 	runGit(t, repo, nil, "add", "old.txt")
@@ -193,7 +193,7 @@ func TestCollectTempRepo(t *testing.T) {
 	if !start.TS.Equal(since) {
 		t.Fatalf("start ts = %s", start.TS)
 	}
-	assertCommit(t, start, repoAbs, "github.com/JeremyJaymes/otto", "alice@example.com", []string{"README.md"}, []string{"GEN-100"}, 1, 0)
+	assertCommit(t, start, repoAbs, "github.com/example/acme-app", "alice@example.com", []string{"README.md"}, []string{"GEN-100"}, 1, 0)
 	if strings.Join(start.Refs, ",") != "GEN-100" {
 		t.Fatalf("refs = %#v", start.Refs)
 	}
@@ -202,22 +202,22 @@ func TestCollectTempRepo(t *testing.T) {
 	}
 
 	note := byTitle["Add note"]
-	assertCommit(t, note, repoAbs, "github.com/JeremyJaymes/otto", "alice@example.com", []string{"note.txt"}, []string{"a1b2c3d"}, 1, 0)
+	assertCommit(t, note, repoAbs, "github.com/example/acme-app", "alice@example.com", []string{"note.txt"}, []string{"a1b2c3d"}, 1, 0)
 
 	revert := byTitle[`Revert "Add note"`]
-	assertCommit(t, revert, repoAbs, "github.com/JeremyJaymes/otto", "alice@example.com", []string{"note.txt"}, []string{note.SourceID}, 0, 1)
-	if revert.URL != "https://github.com/JeremyJaymes/otto/commit/"+revert.SourceID {
+	assertCommit(t, revert, repoAbs, "github.com/example/acme-app", "alice@example.com", []string{"note.txt"}, []string{note.SourceID}, 0, 1)
+	if revert.URL != "https://github.com/example/acme-app/commit/"+revert.SourceID {
 		t.Fatalf("url = %s", revert.URL)
 	}
 
 	retries := byTitle["Handle retries #12"]
-	assertCommit(t, retries, repoAbs, "github.com/JeremyJaymes/otto", "alice@example.com", nil, []string{"#12", "GEN-301", "a1b2c3d"}, 2, 0)
+	assertCommit(t, retries, repoAbs, "github.com/example/acme-app", "alice@example.com", nil, []string{"#12", "GEN-301", "a1b2c3d"}, 2, 0)
 	if !sameStrings(retries.Files, []string{"README.md", "app/retry.go"}) && !sameStrings(retries.Files, []string{"app/retry.go", "README.md"}) {
 		t.Fatalf("files = %#v", retries.Files)
 	}
 
 	renamed := byTitle["Rename retry file"]
-	assertCommit(t, renamed, repoAbs, "github.com/JeremyJaymes/otto", "alice@example.com", []string{"app/retries.go"}, nil, 0, 0)
+	assertCommit(t, renamed, repoAbs, "github.com/example/acme-app", "alice@example.com", []string{"app/retries.go"}, nil, 0, 0)
 
 	edgeEv := byTitle["Edge marker"]
 	assertCommit(t, edgeEv, edgeAbs, "github.com/acme/edge", "alice@example.com", []string{"edge.txt"}, nil, 1, 0)
@@ -226,7 +226,7 @@ func TestCollectTempRepo(t *testing.T) {
 	}
 
 	merged := byTitle["Merge branch 'feature'"]
-	if merged.Branch != "main" || merged.CWD != repoAbs || merged.Repo != "github.com/JeremyJaymes/otto" {
+	if merged.Branch != "main" || merged.CWD != repoAbs || merged.Repo != "github.com/example/acme-app" {
 		t.Fatalf("merge = %#v", merged)
 	}
 	spike := byTitle["Try Lob adapter"]
@@ -465,9 +465,9 @@ func TestNormalizeRemote(t *testing.T) {
 		in   string
 		want string
 	}{
-		{in: "git@github.com:JeremyJaymes/otto.git", want: "github.com/JeremyJaymes/otto"},
-		{in: "https://github.com/JeremyJaymes/otto.git", want: "github.com/JeremyJaymes/otto"},
-		{in: "https://github.com/JeremyJaymes/otto/", want: "github.com/JeremyJaymes/otto"},
+		{in: "git@github.com:example/acme-app.git", want: "github.com/example/acme-app"},
+		{in: "https://github.com/example/acme-app.git", want: "github.com/example/acme-app"},
+		{in: "https://github.com/example/acme-app/", want: "github.com/example/acme-app"},
 		{in: "https://GitHub.com/Owner/Repo.git", want: "github.com/Owner/Repo"},
 		{in: "https://user:s3cret-token@github.com/acme/widgets.git", want: "github.com/acme/widgets"},
 		{in: "ssh://git@github.com/acme/widgets.git", want: "github.com/acme/widgets"},
